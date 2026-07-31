@@ -1,0 +1,20 @@
+# ===== Local tooling / personal config =====
+.claude/
+.agents/
+skills-lock.json
+
+# ===== macOS =====
+.DS_Store
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+*.log
+
+# ===== 运行产物 =====
+gpu-reports/
+*.html.tmp

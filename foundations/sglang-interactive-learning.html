@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGLang 交互式学习中心 | FDE 定向</title>
+<style>
+/* ===== Reset & Base ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#0d9488;--primary-dark:#0f766e;--primary-light:#ccfbf1;
+  --accent:#f59e0b;--success:#10b981;--danger:#ef4444;--info:#3b82f6;
+  --bg:#f6f9f8;--surface:#fff;--surface-alt:#f0f5f4;--border:#dce5e2;
+  --text:#0f172a;--text-secondary:#475569;--text-muted:#94a3b8;
+  --radius:12px;--radius-sm:8px;
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 1px 3px rgba(15,23,42,.06);
+  --shadow-md:0 4px 8px rgba(15,23,42,.05),0 2px 4px rgba(15,23,42,.04);
+  --shadow-lg:0 12px 24px rgba(15,23,42,.06),0 4px 8px rgba(15,23,42,.04);
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--text);line-height:1.7;min-height:100vh;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;
+  background-image:radial-gradient(circle at 20% 50%,rgba(13,148,136,.03) 0%,transparent 50%),
+    radial-gradient(circle at 80% 20%,rgba(13,148,136,.02) 0%,transparent 50%);
+}
+/* ===== Header ===== */
+.header{
+  background:linear-gradient(135deg,#042f2e 0%,#115e59 40%,#0d9488 100%);
+  color:#fff;padding:40px 24px 28px;text-align:center;position:relative;overflow:hidden;
+}
+.header::before{content:"";position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");pointer-events:none;}
+.header h1{font-size:2.3rem;font-weight:800;letter-spacing:-.5px;margin-bottom:6px;position:relative;}
+.header .subtitle{font-size:1rem;opacity:.85;position:relative;}
+.header .who-for{font-size:.82rem;opacity:.65;margin-top:6px;position:relative;}
+.badge-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px;position:relative;}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;font-size:.8rem;font-weight:600;backdrop-filter:blur(4px);}
+.badge-fde{background:rgba(245,158,11,.2);color:#fbbf24;border:1px solid rgba(245,158,11,.3);}
+.badge-sgl{background:rgba(13,148,136,.2);color:#5eead4;border:1px solid rgba(13,148,136,.3);}
+.badge-prod{background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.3);}
+
+/* ===== Container ===== */
+.container{max-width:1100px;margin:0 auto;padding:0 20px}
+
+/* ===== Progress ===== */
+.progress-wrap{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 0;}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;max-width:1100px;margin:0 auto;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),#14b8a6);border-radius:2px;transition:width .4s;}
+.progress-text{text-align:center;font-size:.78rem;color:var(--text-secondary);margin-top:4px;}
+
+/* ===== Tabs ===== */
+.tab-nav{display:flex;gap:2px;flex-wrap:wrap;padding:16px 0 0;border-bottom:2px solid var(--border);position:sticky;top:48px;background:var(--bg);z-index:99;}
+.tab-btn{padding:8px 13px;border:none;background:none;font-size:.8rem;font-weight:600;color:var(--text-secondary);cursor:pointer;border-radius:var(--radius-sm) var(--radius-sm) 0 0;transition:all .2s;white-space:nowrap;}
+.tab-btn:hover{color:var(--primary);background:var(--primary-light);}
+.tab-btn.active{color:var(--primary);background:var(--surface);box-shadow:0 -2px 0 var(--primary);}
+.tab-btn .t-icon{margin-right:4px;}
+
+/* ===== Section ===== */
+.section{display:none;padding:28px 0 50px;}
+.section.active{display:block;}
+.section-title{font-size:1.7rem;font-weight:700;margin-bottom:6px;}
+.section-desc{color:var(--text-secondary);margin-bottom:28px;font-size:.95rem;max-width:720px;}
+
+/* ===== Cards ===== */
+.card{background:var(--surface);border-radius:var(--radius);padding:24px;margin-bottom:18px;border:1px solid var(--border);box-shadow:var(--shadow);transition:box-shadow .3s ease,transform .2s ease,border-color .3s ease;}
+.card:hover{box-shadow:var(--shadow-md);border-color:#cbd5d2;}
+.card h3{font-size:1.1rem;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+
+/* ===== Callouts ===== */
+.fde-callout{background:linear-gradient(135deg,#fffbeb,#fef3c7);border-left:4px solid var(--accent);border-radius:var(--radius);padding:14px 18px;margin:14px 0;font-size:.88rem;}
+.fde-callout strong{color:#92400e;}
+.fde-callout .clabel{display:inline-block;background:var(--accent);color:#fff;padding:2px 10px;border-radius:10px;font-size:.72rem;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+.info-callout{background:linear-gradient(135deg,#eff6ff,#dbeafe);border-left:4px solid var(--info);border-radius:var(--radius);padding:14px 18px;margin:14px 0;font-size:.88rem;}
+.info-callout strong{color:#1e40af;}
+.info-callout .clabel{display:inline-block;background:var(--info);color:#fff;padding:2px 10px;border-radius:10px;font-size:.72rem;font-weight:700;margin-bottom:6px;}
+.compare-callout{background:linear-gradient(135deg,#f0fdf4,#d1fae5);border-left:4px solid #0d9488;border-radius:var(--radius);padding:14px 18px;margin:14px 0;font-size:.88rem;}
+.compare-callout .clabel{display:inline-block;background:var(--primary);color:#fff;padding:2px 10px;border-radius:10px;font-size:.72rem;font-weight:700;margin-bottom:6px;}
+
+/* ===== Objectives & Takeaways ===== */
+.objectives-box{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-left:4px solid var(--success);border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;font-size:.85rem;}
+.objectives-box .obj-label{font-weight:700;color:#065f46;margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+.objectives-box ul{margin:4px 0 0 18px;}
+.objectives-box li{margin-bottom:3px;}
+.takeaways-box{background:linear-gradient(135deg,#eff6ff,#dbeafe);border-left:4px solid var(--info);border-radius:var(--radius);padding:14px 18px;margin:20px 0 0;font-size:.85rem;}
+.takeaways-box .tk-label{font-weight:700;color:#1e40af;margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+.takeaways-box ul{margin:4px 0 0 18px;}
+.takeaways-box li{margin-bottom:3px;}
+
+/* ===== Arch Diagram ===== */
+.arch-diagram{display:flex;flex-direction:column;gap:10px;padding:18px;background:var(--surface-alt);border-radius:var(--radius);margin:14px 0;font-family:"SF Mono","Fira Code",monospace;font-size:.8rem;overflow-x:auto;}
+.arch-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.arch-box{padding:7px 14px;border-radius:var(--radius-sm);font-weight:600;text-align:center;min-width:90px;transition:all .3s;cursor:pointer;position:relative;font-size:.82rem;}
+.arch-box:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);}
+.arch-box.api{background:#dbeafe;color:#1e40af;border:2px solid #93c5fd;}
+.arch-box.engine{background:#ccfbf1;color:#0f766e;border:2px solid #5eead4;}
+.arch-box.worker{background:#d1fae5;color:#065f46;border:2px solid #6ee7b7;}
+.arch-box.model{background:#fce7f3;color:#9d174d;border:2px solid #f9a8d4;}
+.arch-box.router{background:#fef3c7;color:#92400e;border:2px solid #fcd34d;}
+.arch-arrow{color:var(--text-muted);font-size:1.1rem;flex-shrink:0;}
+.arch-label{font-size:.68rem;color:var(--text-muted);text-align:center;margin-top:2px;}
+
+/* ===== Collapsible ===== */
+.collapsible{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;background:var(--surface);}
+.collapse-trigger{width:100%;padding:14px 18px;background:none;border:none;text-align:left;font-size:.92rem;font-weight:600;cursor:pointer;display:flex;justify-content:space-between;align-items:center;color:var(--text);transition:background .2s;}
+.collapse-trigger:hover{background:var(--surface-alt);}
+.collapse-trigger .arrow{transition:transform .3s;font-size:.75rem;color:var(--text-muted);}
+.collapsible.open .collapse-trigger .arrow{transform:rotate(180deg);}
+.collapse-content{max-height:0;overflow:hidden;transition:max-height .4s,padding .4s;}
+.collapsible.open .collapse-content{max-height:2000px;padding:0 18px 18px;}
+
+/* ===== Tables ===== */
+.comparison-table{width:100%;border-collapse:collapse;font-size:.85rem;margin:10px 0;}
+.comparison-table th{background:var(--surface-alt);padding:9px 12px;text-align:left;font-weight:700;border-bottom:2px solid var(--border);}
+.comparison-table td{padding:9px 12px;border-bottom:1px solid var(--border);}
+.comparison-table tr:hover td{background:var(--surface-alt);}
+
+/* ===== Flow Phase ===== */
+.flow-phase{border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:7px;overflow:hidden;background:var(--surface);}
+.phase-header{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;transition:background .2s;user-select:none;}
+.phase-header:hover{background:var(--surface-alt);}
+.phase-num{width:26px;height:26px;display:flex;align-items:center;justify-content:center;background:var(--primary);color:#fff;border-radius:50%;font-size:.75rem;font-weight:700;flex-shrink:0;}
+.phase-title{flex:1;font-weight:600;font-size:.88rem;}
+.phase-time{font-size:.75rem;color:var(--text-muted);flex-shrink:0;}
+.phase-header .arrow{font-size:.7rem;color:var(--text-muted);transition:transform .3s;}
+.flow-phase.open .phase-header .arrow{transform:rotate(180deg);}
+.phase-body{max-height:0;overflow:hidden;transition:max-height .4s,padding .4s;padding:0 14px;font-size:.83rem;}
+.flow-phase.open .phase-body{max-height:800px;padding:0 14px 12px;}
+
+/* ===== Code Translation ===== */
+.code-translation{display:grid;grid-template-columns:1fr 1fr;gap:2px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin:14px 0;font-size:.82rem;}
+.code-translation .ct-code{background:#134e4a;color:#e2e8f0;padding:14px;font-family:"SF Mono","Fira Code",monospace;line-height:1.6;}
+.code-translation .ct-plain{background:#f8fafc;padding:14px;line-height:1.6;color:var(--text-secondary);border-left:1px solid var(--border);}
+.code-translation .ct-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.code-translation .ct-label.code-label{color:#5eead4;}
+.code-translation .ct-label.plain-label{color:var(--text-muted);}
+@media(max-width:768px){.code-translation{grid-template-columns:1fr;}}
+
+/* ===== Chat Animation ===== */
+.chat-thread{background:var(--surface-alt);border-radius:var(--radius);padding:16px;max-width:600px;margin:14px auto;font-size:.82rem;}
+.chat-msg{display:flex;gap:10px;margin-bottom:14px;align-items:flex-start;opacity:0;transform:translateY(12px);transition:all .4s ease;}
+.chat-msg.visible{opacity:1;transform:translateY(0);}
+.chat-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;font-weight:700;}
+.chat-avatar.api{background:#dbeafe;color:#1e40af;}
+.chat-avatar.engine{background:#ccfbf1;color:#0f766e;}
+.chat-avatar.router{background:#fef3c7;color:#92400e;}
+.chat-bubble{background:var(--surface);padding:10px 14px;border-radius:12px;box-shadow:var(--shadow);max-width:85%;line-height:1.5;border:1px solid var(--border);}
+.chat-bubble .chat-name{font-weight:700;font-size:.78rem;margin-bottom:4px;}
+.chat-bubble code{background:var(--surface-alt);padding:1px 5px;border-radius:3px;font-size:.78rem;}
+.chat-replay{text-align:center;margin-top:8px;}
+.chat-replay button{padding:8px 20px;background:var(--primary);color:#fff;border:none;border-radius:20px;cursor:pointer;font-weight:600;font-size:.82rem;}
+.chat-replay button:hover{background:var(--primary-dark);}
+
+/* ===== Quick Check ===== */
+.quick-check{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:18px;margin-top:18px;transition:border-color .3s;}
+.quick-check.correct{border-color:var(--success);background:#f0fdf4;}
+.quick-check.wrong{border-color:var(--danger);background:#fef2f2;}
+.quick-check .qc-q{font-weight:700;font-size:.9rem;margin-bottom:10px;}
+.quick-check .qc-opt{display:inline-block;padding:6px 14px;margin:3px 6px 3px 0;background:var(--surface-alt);border:2px solid transparent;border-radius:20px;font-size:.82rem;cursor:pointer;transition:all .2s;}
+.quick-check .qc-opt:hover{border-color:var(--primary);}
+.quick-check .qc-opt.chosen-correct{background:#d1fae5;border-color:var(--success);}
+.quick-check .qc-opt.chosen-wrong{background:#fee2e2;border-color:var(--danger);}
+.quick-check .qc-opt.disabled{pointer-events:none;opacity:.7;}
+.quick-check .qc-fb{margin-top:8px;font-size:.82rem;display:none;}
+.quick-check .qc-fb.show{display:block;}
+
+/* ===== Quiz ===== */
+.quiz-card{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:14px;transition:border-color .3s;}
+.quiz-card.correct{border-color:var(--success);background:#f0fdf4;}
+.quiz-card.wrong{border-color:var(--danger);background:#fef2f2;}
+.quiz-question{font-weight:700;margin-bottom:14px;font-size:.98rem;}
+.quiz-option{display:block;width:100%;padding:11px 14px;margin-bottom:7px;background:var(--surface-alt);border:2px solid transparent;border-radius:var(--radius-sm);text-align:left;font-size:.88rem;cursor:pointer;transition:all .2s;}
+.quiz-option:hover:not(.disabled){border-color:var(--primary);background:var(--primary-light);}
+.quiz-option.correct-answer{border-color:var(--success);background:#d1fae5;}
+.quiz-option.wrong-answer{border-color:var(--danger);background:#fee2e2;}
+.quiz-option.disabled{cursor:default;opacity:.7;}
+.quiz-feedback{margin-top:10px;padding:10px;border-radius:var(--radius-sm);font-size:.85rem;display:none;}
+.quiz-feedback.show{display:block;}
+.quiz-feedback.correct{background:#d1fae5;color:#065f46;}
+.quiz-feedback.wrong{background:#fee2e2;color:#991b1b;}
+.quiz-score{text-align:center;font-size:1.2rem;font-weight:700;padding:18px;margin-top:6px;border-radius:var(--radius);}
+
+/* ===== Config & Cheat Grid ===== */
+.config-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+.config-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);}
+.config-card .param{font-family:"SF Mono","Fira Code",monospace;background:var(--surface-alt);padding:2px 8px;border-radius:4px;font-size:.8rem;color:var(--primary-dark);font-weight:600;}
+.config-card .desc{font-size:.83rem;color:var(--text-secondary);margin-top:5px;}
+.config-card .impact{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.72rem;font-weight:600;margin-top:6px;}
+.impact-high{background:#fef2f2;color:#991b1b;}.impact-med{background:#fffbeb;color:#92400e;}.impact-low{background:#f0fdf4;color:#065f46;}
+.cheat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+.cheat-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);}
+.cheat-item h4{font-size:.92rem;margin-bottom:7px;color:var(--primary-dark);}
+.cheat-item pre{background:#134e4a;color:#e2e8f0;padding:10px;border-radius:var(--radius-sm);font-size:.76rem;overflow-x:auto;margin:7px 0;line-height:1.5;}
+
+/* ===== Roadmap ===== */
+.roadmap{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:16px 0;}
+.roadmap-step{display:flex;align-items:center;gap:6px;padding:10px 16px;background:var(--surface);border:2px solid var(--border);border-radius:50px;font-size:.83rem;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.roadmap-step:hover{border-color:var(--primary);background:var(--primary-light);transform:translateY(-1px);}
+.roadmap-step .rs-num{width:24px;height:24px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0;}
+.roadmap-arrow{color:var(--text-muted);font-size:1.2rem;align-self:center;}
+.roadmap-step.done{border-color:var(--success);background:#f0fdf4;}
+.roadmap-step.done .rs-num{background:var(--success);}
+
+/* ===== Checklist ===== */
+.checklist{list-style:none;padding:0;}
+.checklist li{padding:6px 0;font-size:.88rem;display:flex;align-items:center;gap:8px;cursor:pointer;}
+.checklist li .cb{width:18px;height:18px;border:2px solid var(--border);border-radius:4px;flex-shrink:0;transition:all .2s;}
+.checklist li.checked .cb{background:var(--success);border-color:var(--success);position:relative;}
+.checklist li.checked .cb::after{content:"✓";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.68rem;font-weight:700;}
+.checklist li.checked{color:var(--text-muted);text-decoration:line-through;}
+
+/* ===== Section Nav ===== */
+.section-nav{display:flex;justify-content:space-between;align-items:center;margin-top:32px;padding-top:20px;border-top:1px solid var(--border);}
+.nav-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:var(--surface);border:1.5px solid var(--border);border-radius:50px;font-size:.85rem;font-weight:600;color:var(--text-secondary);cursor:pointer;transition:all .25s ease;text-decoration:none;}
+.nav-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-light);transform:translateX(0);box-shadow:0 2px 8px rgba(13,148,136,.08);}
+
+/* ===== Glossary ===== */
+.gloss-term{border-bottom:1.5px dashed var(--primary);cursor:help;color:var(--primary-dark);position:relative;}
+.gloss-term:hover::after{content:attr(data-def);position:absolute;bottom:130%;left:50%;transform:translateX(-50%);background:#134e4a;color:#fff;padding:8px 14px;border-radius:8px;font-size:.76rem;white-space:normal;max-width:300px;line-height:1.4;z-index:10;pointer-events:none;text-align:left;}
+
+/* ===== Scroll Top ===== */
+.scroll-top{position:fixed;bottom:24px;right:24px;width:40px;height:40px;background:var(--primary);color:#fff;border:none;border-radius:50%;font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow-lg);opacity:0;transition:opacity .3s;z-index:200;}
+.scroll-top.visible{opacity:1;}
+.scroll-top:hover{background:var(--primary-dark);}
+
+@media(max-width:768px){.header h1{font-size:1.5rem;}.tab-btn{padding:7px 10px;font-size:.74rem;}.config-grid,.cheat-grid{grid-template-columns:1fr;}.roadmap{flex-direction:column;align-items:center;}.roadmap-arrow{transform:rotate(90deg);}}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <h1>⚡ SGLang 交互式学习中心</h1>
+  <p class="subtitle">面向 FDE（Forward Deployment Engineer）的高性能 LLM 推理框架深度掌握</p>
+  <p class="who-for">🎯 适合：了解大模型基本概念和 vLLM，期望深入掌握 SGLang 的工程师</p>
+  <div class="badge-row">
+    <span class="badge badge-sgl">🖥️ SGLang</span>
+    <span class="badge badge-fde">🔧 FDE 实战</span>
+    <span class="badge badge-prod">🏭 400K+ GPU</span>
+  </div>
+</header>
+
+<div class="progress-wrap">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  <div class="progress-text" id="progressText">已探索 0 / 10 个模块</div>
+</div>
+
+<nav class="tab-nav container" id="tabNav">
+  <button class="tab-btn active" data-tab="roadmap"><span class="t-icon">🎓</span>学习路线</button>
+  <button class="tab-btn" data-tab="overview"><span class="t-icon">🗺️</span>全景概览</button>
+  <button class="tab-btn" data-tab="radix"><span class="t-icon">🌳</span>RadixAttention</button>
+  <button class="tab-btn" data-tab="architecture"><span class="t-icon">🏗️</span>核心架构</button>
+  <button class="tab-btn" data-tab="pd-separation"><span class="t-icon">🔀</span>PD 分离</button>
+  <button class="tab-btn" data-tab="router"><span class="t-icon">🧭</span>Router & 分布式</button>
+  <button class="tab-btn" data-tab="deployment"><span class="t-icon">🚀</span>部署实战</button>
+  <button class="tab-btn" data-tab="vs-vllm"><span class="t-icon">⚔️</span>vLLM 对比</button>
+  <button class="tab-btn" data-tab="cheatsheet"><span class="t-icon">📋</span>FDE 速查</button>
+  <button class="tab-btn" data-tab="quiz"><span class="t-icon">🧪</span>自测挑战</button>
+</nav>
+
+<!-- SECTION 1: 学习路线 -->
+<section class="section active container" id="sec-roadmap">
+  <h2 class="section-title">🎓 学习路线 & 前置知识</h2>
+  <p class="section-desc">在深入 SGLang 之前，确认前置知识并了解推荐学习顺序。</p>
+  <div class="objectives-box">
+    <div class="obj-label">🎯 本模块学习目标</div>
+    <ul>
+      <li>理解 SGLang 在推理引擎生态中的<strong>独特定位</strong>（vs vLLM）</li>
+      <li>知道 <strong>RadixAttention</strong> 如何用前缀树实现比 PagedAttention 更高效的前缀共享</li>
+      <li>清楚学习路径：前置知识 → 概览 → RadixAttention → 架构 → PD 分离 → Router → 部署 → 对比</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>🗺️ 推荐学习路径（点击可跳转）</h3>
+    <div class="roadmap" id="roadmapEl">
+      <div class="roadmap-step" data-goto="roadmap"><span class="rs-num">1</span>前置知识</div><span class="roadmap-arrow">→</span>
+      <div class="roadmap-step" data-goto="overview"><span class="rs-num">2</span>全景概览</div><span class="roadmap-arrow">→</span>
+      <div class="roadmap-step" data-goto="radix"><span class="rs-num">3</span>RadixAttention</div><span class="roadmap-arrow">→</span>
+      <div class="roadmap-step" data-goto="architecture"><span class="rs-num">4</span>核心架构</div><span class="roadmap-arrow">→</span>
+      <div class="roadmap-step" data-goto="pd-separation"><span class="rs-num">5</span>PD 分离</div><span class="roadmap-arrow">→</span>
+      <div class="roadmap-step" data-goto="router"><span class="rs-num">6</span>Router</div><span class="roadmap-arrow">→</span>
+      <div class="roadmap-step" data-goto="deployment"><span class="rs-num">7</span>部署实战</div><span class="roadmap-arrow">→</span>
+      <div class="roadmap-step" data-goto="vs-vllm"><span class="rs-num">8</span>vLLM对比</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📖 前置速览：SGLang vs vLLM 一句话对比</h3>
+    <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:12px;">如果你已经了解 vLLM，核心区别只有两点：</p>
+    <table class="comparison-table">
+      <thead><tr><th>概念</th><th>vLLM</th><th>SGLang</th><th>为什么更好？</th></tr></thead>
+      <tbody>
+        <tr><td><strong>前缀缓存</strong></td><td>Prefix Caching（哈希匹配，需手动开启）</td><td><span class="gloss-term" data-def="用 Radix Tree 自动共享相同前缀的 KV Cache。只要 token 序列前缀匹配就能复用，不需要完全相同的 prompt">RadixAttention（前缀树自动复用）</span></td><td>自动去重，无需配置</td></tr>
+        <tr><td><strong>调度</strong></td><td>Iteration-level busy loop</td><td>零开销调度（编译时确定）</td><td>调度本身不耗 CPU</td></tr>
+        <tr><td><strong>结构化输出</strong></td><td>需 xgrammar 等外部工具</td><td><strong>原生内置</strong></td><td>API 更简洁</td></tr>
+        <tr><td><strong>负载均衡</strong></td><td>外部 LB（Nginx）</td><td><strong>sgl-router</strong>（缓存感知）</td><td>智能路由到缓存命中的 Worker</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>✅ 学习检查清单</h3>
+    <ul class="checklist" id="checklistEl">
+      <li data-key="vllm-basics" onclick="toggleCheck(this)"><span class="cb"></span>已掌握 vLLM 基础（PagedAttention / KV Cache / CB）</li>
+      <li data-key="radix-tree" onclick="toggleCheck(this)"><span class="cb"></span>理解 Radix Tree（前缀树）的基本结构</li>
+      <li data-key="radix-attention" onclick="toggleCheck(this)"><span class="cb"></span>能解释 RadixAttention 相比 PagedAttention 的优势</li>
+      <li data-key="pd-separation" onclick="toggleCheck(this)"><span class="cb"></span>理解 PD 分离架构及其部署方式</li>
+      <li data-key="sgl-router" onclick="toggleCheck(this)"><span class="cb"></span>理解 sgl-router 的缓存感知路由原理</li>
+      <li data-key="vs-vllm" onclick="toggleCheck(this)"><span class="cb"></span>能说清什么时候选 SGLang、什么时候选 vLLM</li>
+      <li data-key="deploy-sglang" onclick="toggleCheck(this)"><span class="cb"></span>能独立完成 SGLang 单机 + PD 分离部署</li>
+    </ul>
+  </div>
+
+  <div class="takeaways-box">
+    <div class="tk-label">📝 要点回顾</div>
+    <ul><li>SGLang 的核心是 <strong>RadixAttention</strong>（前缀树自动去重）</li><li>SGLang 和 vLLM <strong>互补</strong>而非替代</li><li>理解 SGLang = 理解它在<strong>哪里比 vLLM 强</strong></li></ul>
+  </div>
+
+  <div class="section-nav"><span></span><button class="nav-btn" onclick="switchTab('overview')">下一节：全景概览 →</button></div>
+</section>
+
+<!-- SECTION 2: 全景概览 -->
+<section class="section container" id="sec-overview">
+  <h2 class="section-title">🗺️ SGLang 全景概览</h2>
+  <p class="section-desc">SGLang 是什么？为什么 FDE 需要同时掌握 SGLang 和 vLLM？</p>
+  <div class="objectives-box">
+    <div class="obj-label">🎯 本模块学习目标</div>
+    <ul><li>一句话说清 SGLang 的定位和核心能力</li><li>画出 SGLang <strong>单机/多机/PD 分离</strong>三种部署架构的进程拓扑</li><li>理解 SGLang 的<strong>四大优势场景</strong>和<strong>六种进程间通信方式</strong></li></ul>
+  </div>
+
+  <div class="card">
+    <h3>🎯 一句话定位</h3>
+    <p>SGLang 是 LMSYS 组织维护的<strong>高性能 LLM 推理框架</strong>，核心创新 <strong>RadixAttention（前缀树自动缓存复用）</strong>。在共享前缀场景（system prompt、few-shot、多轮对话）下性能显著超越 vLLM，每天在 <strong>400,000+ GPU</strong> 上生成数万亿 tokens。</p>
+    <div class="fde-callout"><div class="clabel">🔑 FDE 视角</div><strong>为什么 FDE 必须同时懂 SGLang？</strong> 不同场景选不同引擎--这是 FDE 的核心决策能力。共享前缀多的场景 → SGLang 明显更快；通用场景 → vLLM 更成熟。面试高频：RadixAttention vs PagedAttention、PD 分离部署、sgl-router 原理。</div>
+  </div>
+
+  <div class="card">
+    <h3>💡 SGLang 四大优势场景</h3>
+    <table class="comparison-table">
+      <thead><tr><th>场景</th><th>技术原因</th><th>典型收益</th></tr></thead>
+      <tbody>
+        <tr><td><strong>共享 System Prompt</strong></td><td>Radix Tree 自动去重相同前缀的 KV Cache</td><td>TTFT ↓ 50-80%</td></tr>
+        <tr><td><strong>Few-shot Prompting</strong></td><td>示例 token 在树中只存一份</td><td>吞吐 ↑ 2-5x</td></tr>
+        <tr><td><strong>多轮对话</strong></td><td>每轮自动复用历史对话的 KV Cache</td><td>延迟 ↓ 40-60%</td></tr>
+        <tr><td><strong>结构化 JSON 输出</strong></td><td>原生 RadixAttention 约束解码</td><td>代码更简洁</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SGLang 部署架构详解 -->
+  <div class="card">
+    <h3>🏗️ 单机部署架构 — 进程全景</h3>
+    <p style="font-size:.83rem;color:var(--text-secondary);margin-bottom:12px;">
+      SGLang 单机启动时（<code>python -m sglang.launch_server</code>），内部启动以下进程：
+    </p>
+    <div class="arch-diagram" style="font-size:.76rem;line-height:1.7;">
+<pre style="background:transparent;">
+┌──────────────────────────────────────────────────────────┐
+│  ① API Server (HTTP + Tokenizer)                         │
+│     监听 :30000，接受 OpenAI 兼容请求                     │
+│     Tokenization / Detokenization                        │
+│     通过 <strong>ZMQ</strong> 发给 Scheduler                         │
+├──────────────────────────────────────────────────────────┤
+│  ② Scheduler (主进程)                                    │
+│     零开销调度：编译时确定执行计划，运行时几乎不做决策        │
+│     管理 Radix Tree（前缀缓存命中/写入/淘汰）               │
+│     管理 KV Cache Block Pool（分配/释放）                  │
+│     通过 <strong>ZMQ</strong> 将 batch 分发给 GPU Workers               │
+├──────────────────────────────────────────────────────────┤
+│  ③ GPU Worker × N (TP=N)                                 │
+│     每个 Worker 独占一张 GPU                              │
+│     加载模型分片（TP shard）                               │
+│     执行 forward pass + RadixAttention Kernel            │
+│     Worker 间通过 <strong>NCCL</strong> 做 AllReduce (TP 通信)         │
+├──────────────────────────────────────────────────────────┤
+│  ④ (可选) sgl-router — Rust 独立进程                      │
+│     追踪所有 Worker 的 Radix Tree 状态                    │
+│     将请求路由到缓存命中率最高的 Worker                     │
+│     通过 <strong>HTTP</strong> 与 Worker 通信                           │
+└──────────────────────────────────────────────────────────┘
+</pre>
+    </div>
+    <p style="font-size:.8rem;color:var(--text-muted);margin-top:6px;">
+      <strong>默认端口：</strong>API Server 监听 30000，sgl-router 监听 8080（如有）
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>🌐 多机部署架构 — 含 sgl-router</h3>
+    <p style="font-size:.83rem;color:var(--text-secondary);margin-bottom:12px;">
+      生产环境推荐部署架构：sgl-router 作为统一入口，多个 SGLang Worker 节点通过 Ray 集群管理。
+    </p>
+    <div class="arch-diagram" style="font-size:.74rem;line-height:1.7;">
+<pre style="background:transparent;">
+                        Client Requests
+                              │
+                              ▼
+              ┌──────────────────────────────┐
+              │  🧭 sgl-router (Rust)         │  ← 独立进程，缓存感知负载均衡
+              │  监听 :8080                   │
+              │  追踪每个 Worker 的 Radix Tree │
+              │  <strong>HTTP</strong> 转发到 Worker           │
+              └──────┬───────┬───────┬───────┘
+                     │       │       │
+              ┌──────▼──┐ ┌──▼──┐ ┌──▼──────┐
+              │ Worker 1 │ │ W2  │ │ Worker N │  ← 每个 Worker = 完整 SGLang Engine
+              │ TP=8     │ │TP=8 │ │ TP=8     │
+              │ GPU 0~7  │ │...  │ │ ...      │
+              └──────────┘ └─────┘ └──────────┘
+                     │       │       │
+                     └───────┼───────┘
+                    <strong>NCCL</strong> (机内 TP 通信)
+                    跨节点: <strong>Ray</strong> 集群管理 + <strong>NCCL</strong> 跨节点通信
+</pre>
+    </div>
+    <div class="fde-callout" style="font-size:.8rem;">
+      <div class="clabel">🔑 关键区分</div>
+      <strong>sgl-router 不是必需的：</strong>单 Worker 场景可以直接访问 API Server (:30000)。多 Worker 场景才需要 sgl-router 做<strong>缓存感知</strong>路由——它知道"哪个 Worker 的 Radix Tree 里已经有这个前缀的缓存"，把请求转发到那个 Worker。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🔀 PD 分离部署架构</h3>
+    <p style="font-size:.83rem;color:var(--text-secondary);margin-bottom:12px;">
+      Prefill 和 Decode 拆分到不同 GPU 集群。Prefill 节点算完 KV Cache 后通过<strong>专用传输通道</strong>传给 Decode 节点。
+    </p>
+    <div class="arch-diagram" style="font-size:.74rem;line-height:1.7;">
+<pre style="background:transparent;">
+              Client Requests
+                    │
+                    ▼
+        ┌──────────────────────┐
+        │  🧭 sgl-router       │
+        └──────┬───────────────┘
+               │
+    ┌──────────┴──────────┐
+    │                     │
+    ▼                     ▼
+┌─────────────────┐  ┌─────────────────┐
+│ Prefill 集群     │  │ Decode 集群      │
+│                 │  │                 │
+│ GPU: H100 × 8   │  │ GPU: H200 × 8   │
+│ TP=8            │  │ TP=4            │
+│ 计算密集型        │  │ 内存密集型        │
+│                 │  │                 │
+│ ① 接收 prompt   │  │ ③ 接收 KV Cache │
+│ ② Prefill → 算  │──│ ④ Decode → 逐   │
+│    全部 KV Cache │  │    token 生成    │
+└─────────────────┘  └─────────────────┘
+        │                     │
+        └── KV Cache 传输 ────┘
+        通过 NIXL / MoonCake / RDMA
+        (GPU 显存到 GPU 显存直通)
+</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📡 进程间通信方式汇总</h3>
+    <table class="comparison-table" style="font-size:.82rem;">
+      <thead><tr><th>通信路径</th><th>协议/方式</th><th>传输内容</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>Client → sgl-router</td><td><strong>HTTP</strong></td><td>原始请求 (JSON)</td><td>OpenAI 兼容 API</td></tr>
+        <tr><td>sgl-router → Worker</td><td><strong>HTTP</strong></td><td>转发请求</td><td>sgl-router 是反向代理</td></tr>
+        <tr><td>API Server → Scheduler</td><td><strong>ZMQ</strong></td><td>token_ids + 元数据</td><td>进程内通信（同节点）</td></tr>
+        <tr><td>Scheduler → GPU Workers</td><td><strong>ZMQ / 共享内存</strong></td><td>batch 数据</td><td>调度指令分发</td></tr>
+        <tr><td>GPU Worker ↔ GPU Worker</td><td><strong>NCCL</strong></td><td>TP AllReduce 梯度/激活值</td><td>NVLink/IB，高频低延迟</td></tr>
+        <tr><td>Prefill → Decode (PD分离)</td><td><strong>NIXL/MoonCake/RDMA</strong></td><td>KV Cache 矩阵 (每 block ~5MB)</td><td>GPU 到 GPU 直通，不走 CPU</td></tr>
+        <tr><td>跨节点 Worker 管理</td><td><strong>Ray</strong></td><td>进程生命周期 + 任务调度</td><td>分布式进程管理器</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="fde-callout">
+    <div class="clabel">🔑 FDE 排障要点</div>
+    <strong>四类通信的排障顺序：</strong><br>
+    ① <strong>HTTP</strong> → <code>curl localhost:30000/health</code> 确认 API Server 活着<br>
+    ② <strong>Ray</strong> → <code>ray status</code> 确认所有节点在线、GPU 数正确<br>
+    ③ <strong>NCCL</strong> → <code>NCCL_DEBUG=INFO</code> 看 AllReduce 是否走 NVLink<br>
+    ④ <strong>PD 传输</strong> → 检查 NIXL/MoonCake 日志，确认 KV Cache 传输不超时<br><br>
+    <strong>进程数核对：</strong>每个启动的 <code>launch_server</code> = 1 个 Scheduler + TP 个 GPU Worker。所有节点加起来，<code>ray status</code> 显示的 GPU 数应等于各节点 GPU Worker 总和。
+  </div>
+
+  <!-- sgl-router vs API Server vs Engine 关系 -->
+  <div class="card">
+    <h3>🧭 sgl-router、API Server、SGLang Engine 之间的关系</h3>
+    <p style="font-size:.83rem;color:var(--text-secondary);margin-bottom:12px;">
+      三个概念容易混淆——它们<strong>不是替代关系，而是层级叠加</strong>。
+    </p>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">各自的角色</h4>
+    <table class="comparison-table" style="font-size:.82rem;">
+      <thead><tr><th>组件</th><th>是什么</th><th>是否独立进程</th><th>是否必须</th><th>受众</th></tr></thead>
+      <tbody>
+        <tr><td><strong>sgl-router</strong></td><td>Rust 反向代理，缓存感知负载均衡</td><td>✅ 独立进程</td><td>❌ 可选（多 Worker 时推荐）</td><td>Client → Router</td></tr>
+        <tr><td><strong>API Server</strong></td><td>每个 Worker 的 HTTP 入口</td><td>❌ Engine 进程的一部分</td><td>✅ 必须</td><td>Router → Worker / Client → Worker</td></tr>
+        <tr><td><strong>SGLang Engine</strong></td><td>整个推理引擎</td><td>主进程</td><td>✅ 必须</td><td>内部组件</td></tr>
+      </tbody>
+    </table>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">无 sgl-router（单 Worker）</h4>
+    <div class="arch-diagram" style="font-size:.76rem;line-height:1.7;">
+<pre style="background:transparent;">
+Client ──HTTP──▶ API Server (:30000) ──ZMQ──▶ Scheduler ──ZMQ──▶ GPU Workers
+                 ↑
+                 Tokenization / Detokenization 都在这里
+                 API Server = 整个服务的唯一入口
+</pre>
+    </div>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">有 sgl-router（多 Worker）</h4>
+    <div class="arch-diagram" style="font-size:.76rem;line-height:1.7;">
+<pre style="background:transparent;">
+Client ──HTTP──▶ sgl-router (:8080)
+                   │
+                   │ 查每个 Worker 的 Radix Tree 前缀摘要
+                   │ "Worker 1 命中 5 个 token，Worker 2 命中 1 个"
+                   │ → 选 Worker 1
+                   │
+                   └──HTTP──▶ API Server (:30000) ──ZMQ──▶ Scheduler ──▶ GPU
+                                ↑
+                                API Server 退居"内部接口"
+                                不复暴露给客户端
+</pre>
+    </div>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">关键澄清</h4>
+    <table class="comparison-table" style="font-size:.82rem;">
+      <thead><tr><th>容易混淆的点</th><th>实际关系</th></tr></thead>
+      <tbody>
+        <tr><td>sgl-router 替代了 API Server？</td><td><strong>不是</strong>。sgl-router 是前面的反向代理，每个 Worker 自己的 API Server 照常运行</td></tr>
+        <tr><td>sgl-router 只是 Nginx？</td><td><strong>不是</strong>。Nginx 不知道"哪个后端有缓存"。sgl-router 追踪每个 Worker 的 Radix Tree 状态</td></tr>
+        <tr><td>API Server 是独立进程？</td><td><strong>不是</strong>。它是 SGLang Engine 进程的一部分，跟 Scheduler 共享进程空间</td></tr>
+        <tr><td>sgl-router 和 Scheduler 都做"调度"？</td><td><strong>不同层面</strong>。Router 选 Worker（集群级），Scheduler 管计算（单 Worker 内部）</td></tr>
+      </tbody>
+    </table>
+
+    <div class="fde-callout" style="margin-top:8px;">
+      <div class="clabel">💡 一句话</div>
+      <strong>sgl-router 决定"给谁算"，API Server 负责"接收请求+Tokenization"，Scheduler 决定"怎么算"。</strong>三者各管一层：集群路由 → 请求入口 → 计算规划。
+    </div>
+  </div>
+
+  <div class="takeaways-box"><div class="tk-label">📝 要点回顾</div><ul><li>SGLang = <strong>RadixAttention</strong> + 零开销调度 + 原生结构化输出</li><li>单机：API Server (ZMQ) → Scheduler (ZMQ) → GPU Workers (NCCL)</li><li>多机：sgl-router (HTTP) → Workers × N；跨节点用 Ray + NCCL</li><li>PD 分离：Prefill → KV Cache (RDMA/NIXL) → Decode</li><li>sgl-router <strong>可选</strong>，多 Worker 时做缓存感知路由</li></ul></div>
+
+  <div class="section-nav"><button class="nav-btn" onclick="switchTab('roadmap')">← 学习路线</button><button class="nav-btn" onclick="switchTab('radix')">下一节：RadixAttention →</button></div>
+</section>
+
+<!-- SECTION 3: RadixAttention -->
+<section class="section container" id="sec-radix">
+  <h2 class="section-title">🌳 RadixAttention 深度解析</h2>
+  <p class="section-desc">SGLang 最核心的技术创新--用前缀树（Radix Tree）管理 KV Cache，自动去重。</p>
+  <div class="objectives-box"><div class="obj-label">🎯 本模块学习目标</div><ul><li>画出 Radix Tree 结构并解释它如何<strong>自动去重</strong>前缀</li><li>对比 PagedAttention vs RadixAttention</li><li>至少举例 <strong>3 个</strong>典型优势场景</li></ul></div>
+
+  <div class="card">
+    <h3>🌲 PagedAttention 的"不够聪明"</h3>
+    <div class="arch-diagram" style="font-size:.78rem;">
+      请求1: <code>[What][is][the][capital]</code>... → 4 blocks<br>
+      请求2: <code>[What][is][the][meaning]</code>... → <span style="color:var(--danger);">又 4 blocks</span><br>
+      <span style="color:var(--danger);"><strong>"What is the" 被存了两次 ❌</strong></span>
+    </div>
+    <div class="arch-diagram" style="font-size:.78rem;margin-top:8px;">
+      <strong>RadixAttention：所有请求共享一棵树</strong>
+      <pre style="background:transparent;line-height:1.8;">        What
+         └─ is
+             └─ the
+                ├─ capital  ← 请求1
+                └─ meaning  ← 请求2
+<span style="color:var(--success);"><strong>"What is the" 只存一次 ✅</strong></span></pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📐 Radix Tree 结构示例</h3>
+    <div class="arch-diagram"><pre style="background:transparent;font-size:.8rem;line-height:2;">
+              ""
+            /    \
+   "You are a"   "Explain the"
+      /     \           \
+"helpful"  "concise"   "concept of"
+   /                        \
+"assistant"            "RadixAttention"
+
+<span style="color:var(--text-secondary);">请求① "You are a helpful assistant"
+请求② "You are a concise assistant"（复用 "You are a"）
+请求③ "Explain the concept of RadixAttention"（独立路径）</span></pre></div>
+  </div>
+
+  <div class="card">
+    <h3>🔀 PagedAttention vs RadixAttention</h3>
+    <table class="comparison-table">
+      <thead><tr><th>维度</th><th>PagedAttention (vLLM)</th><th>RadixAttention (SGLang)</th></tr></thead>
+      <tbody>
+        <tr><td><strong>数据结构</strong></td><td>Block Table（类似页表）</td><td>Radix Tree（前缀树）</td></tr>
+        <tr><td><strong>跨请求共享</strong></td><td>需配置 enable-prefix-caching</td><td><strong>默认自动</strong></td></tr>
+        <tr><td><strong>解决什么问题</strong></td><td>单序列内显存碎片</td><td>多序列间缓存冗余</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="compare-callout"><div class="clabel">💡 面试金句</div><strong>"PagedAttention 解决单个序列内部的显存碎片，RadixAttention 解决多个序列之间的缓存冗余。两者不是替代关系--理想情况下，SGLang 内部也用 block 管理，外层用 Radix Tree 做跨请求去重。"</strong></div>
+
+  <div class="takeaways-box"><div class="tk-label">📝 要点回顾</div><ul><li>RadixAttention = Radix Tree × KV Cache</li><li>PagedAttention 管<strong>单序列内</strong>，RadixAttention 管<strong>多序列间</strong></li><li>共享前缀 → SGLang 明显更快</li></ul></div>
+
+  <div class="section-nav"><button class="nav-btn" onclick="switchTab('overview')">← 全景概览</button><button class="nav-btn" onclick="switchTab('architecture')">下一节：核心架构 →</button></div>
+</section>
+
+<!-- SECTION 4: 核心架构 -->
+<section class="section container" id="sec-architecture">
+  <h2 class="section-title">🏗️ 核心架构</h2>
+  <p class="section-desc">SGLang Engine 内部四层结构 + 外部可选的 sgl-router。理解每层的职责和通信方式。</p>
+  <div class="objectives-box"><div class="obj-label">🎯 本模块学习目标</div><ul><li>画出 SGLang 引擎的<strong>内部四层 + 外部 Router</strong>架构</li><li>区分 <strong>API Server</strong>（HTTP入口+Tokenizer）和 <strong>sgl-router</strong>（集群缓存感知路由）</li><li>理解<strong>零开销调度</strong>与 vLLM busy loop 的区别</li></ul></div>
+
+  <div class="card">
+    <h3>🏛️ 准确架构：外部 Router + 内部四层 Engine</h3>
+    <div class="arch-diagram"><pre style="background:transparent;font-size:.76rem;line-height:1.65;">
+<strong>外部（可选，独立 Rust 进程）:</strong>
+┌──────────────────────────────────────┐
+│ 🧭 sgl-router (Rust 独立进程)         │
+│    集群级缓存感知路由                  │
+│    决定"发给哪个 Worker"               │
+│    通过 <strong>HTTP</strong> 转发到 Worker 的 API Server │
+└────────────────┬─────────────────────┘
+                 │ HTTP
+                 ▼
+<strong>SGLang Engine 内部（每个 Worker 一个 Python 进程）:</strong>
+┌──────────────────────────────────────┐
+│  ┌────────────────────────────────┐  │
+│  │ 🔌 API Server                  │  │  ← HTTP 入口 (监听 :30000)
+│  │    Tokenization / Detokenization│  │     参数校验
+│  │    通过 <strong>ZMQ</strong> 发给 Scheduler      │  │     单 Worker 时直接对客户端
+│  └────────────┬───────────────────┘  │
+│               │ ZMQ                   │
+│               ▼                       │
+│  ┌────────────────────────────────┐  │
+│  │ ⚡ Scheduler (零开销)            │  │  ← 编译时规划
+│  │    🌳 Radix Tree 管理           │  │     运行时执行
+│  │    KV Cache Block Pool 管理      │  │     "怎么算"
+│  └────────────┬───────────────────┘  │
+│               │ ZMQ / 共享内存        │
+│               ▼                       │
+│  ┌────────────────────────────────┐  │
+│  │ ⚙️ GPU Workers × TP             │  │  ← 实际计算
+│  │    模型权重分片 (TP shard)        │  │
+│  │    Forward Pass + Sampling      │  │
+│  │    CUDA Kernels (FlashInfer等)  │  │
+│  │    <strong>NCCL</strong> AllReduce (TP 通信)    │  │
+│  └────────────────────────────────┘  │
+└──────────────────────────────────────┘</pre></div>
+  </div>
+
+  <div class="card">
+    <h3>🔀 组件层次关系：谁在谁外面</h3>
+    <table class="comparison-table" style="font-size:.82rem;">
+      <thead><tr><th>组件</th><th>层面</th><th>进程</th><th>通信方式</th><th>决策问题</th></tr></thead>
+      <tbody>
+        <tr><td><strong>sgl-router</strong></td><td>集群级</td><td>独立 Rust 进程</td><td>HTTP 转发</td><td>"发给哪个 Worker？"</td></tr>
+        <tr><td><strong>API Server</strong></td><td>Engine 内部第一层</td><td>Engine 进程内</td><td>ZMQ → Scheduler</td><td>"Tokenization + 接收请求"</td></tr>
+        <tr><td><strong>Scheduler</strong></td><td>Engine 内部第二层</td><td>Engine 进程内</td><td>ZMQ → GPU Workers</td><td>"怎么算？"</td></tr>
+        <tr><td><strong>GPU Workers</strong></td><td>Engine 内部第三层</td><td>Engine 子进程</td><td>NCCL 互相通信</td><td>"执行计算"</td></tr>
+      </tbody>
+    </table>
+
+    <div class="fde-callout" style="margin-top:10px;">
+      <div class="clabel">🔑 关键区分</div>
+      <strong>API Server ≠ sgl-router：</strong>API Server 是<strong>每个 Worker 自带的 HTTP 入口</strong>，负责 Tokenization。sgl-router 是<strong>可选的外部反向代理</strong>，决定请求发给哪个 Worker 的 API Server。<br><br>
+      <strong>单 Worker 不需要 sgl-router</strong>——客户端直接访问 API Server (:30000)。多 Worker 时，sgl-router 坐在前面，根据各 Worker 的 Radix Tree 缓存状态智能路由。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>💬 如果组件会聊天 - 一个请求的 SGLang 之旅</h3>
+    <p style="font-size:.83rem;color:var(--text-secondary);margin-bottom:10px;">用户发送 "What is the capital of France?"</p>
+    <div class="chat-thread" id="chatThread">
+      <div class="chat-msg"><div class="chat-avatar router">🧭</div><div class="chat-bubble"><div class="chat-name" style="color:#92400e;font-weight:700;font-size:.78rem;">sgl-router</div>新请求！查所有 Worker 的 Radix Tree 状态……Worker 1 树下已有 <code>"What is the"</code> 路径。路由到 Worker 1！</div></div>
+      <div class="chat-msg"><div class="chat-avatar engine">🌳</div><div class="chat-bubble"><div class="chat-name" style="color:#0f766e;font-weight:700;font-size:.78rem;">RadixAttention Manager</div>收到请求。Radix Tree 查找……<code>"What is the"</code> KV Cache 已缓存 ✅，只需算新 token <code>"capital of France?"</code>。</div></div>
+      <div class="chat-msg"><div class="chat-avatar engine">⚡</div><div class="chat-bubble"><div class="chat-name" style="color:#0f766e;font-weight:700;font-size:.78rem;">Scheduler（零开销）</div>预编译的执行计划直接执行：Prefill 新 token → Decode → 返回。无需每步重新决策！</div></div>
+      <div class="chat-msg"><div class="chat-avatar api">⚙️</div><div class="chat-bubble"><div class="chat-name" style="color:#1e40af;font-weight:700;font-size:.78rem;">GPU Worker</div>Prefill + Decode 完成。"Paris" 已生成。KV Cache 自动写入 Radix Tree。</div></div>
+      <div class="chat-msg"><div class="chat-avatar router">🧭</div><div class="chat-bubble"><div class="chat-name" style="color:#92400e;font-weight:700;font-size:.78rem;">sgl-router</div>下一个用户也问 "What is the capital of Japan?"，树里 "What is the capital of" 已存在！路由到 Worker 1，只需算 "Japan?" 🚀</div></div>
+    </div>
+    <div class="chat-replay"><button onclick="replayChat()">🔄 重播对话</button></div>
+  </div>
+
+  <div class="takeaways-box"><div class="tk-label">📝 要点回顾</div><ul><li><strong>外部：</strong>sgl-router（独立 Rust 进程，可选）—— 集群级缓存感知路由</li><li><strong>内部 L1：</strong>API Server —— HTTP 入口 + Tokenization（ZMQ 发给 Scheduler）</li><li><strong>内部 L2：</strong>Scheduler（零开销）—— 编译时规划 + Radix Tree 管理 + KV Cache 管理</li><li><strong>内部 L3：</strong>GPU Workers —— Forward Pass + NCCL AllReduce</li><li>单 Worker 不需要 sgl-router，客户端直接访问 API Server (:30000)</li></ul></div>
+
+  <div class="section-nav"><button class="nav-btn" onclick="switchTab('radix')">← RadixAttention</button><button class="nav-btn" onclick="switchTab('pd-separation')">下一节：PD 分离 →</button></div>
+</section>
+
+<!-- SECTION 5: PD 分离 -->
+<section class="section container" id="sec-pd-separation">
+  <h2 class="section-title">🔀 Prefill/Decode 分离架构</h2>
+  <p class="section-desc">FDE 进阶技能：计算密集的 Prefill 和内存密集的 Decode 用不同 GPU 集群。</p>
+  <div class="objectives-box"><div class="obj-label">🎯 本模块学习目标</div><ul><li>解释 <strong>为什么要 PD 分离</strong>（资源争抢问题）</li><li>理解数据流：Prefill → KV Cache 传输 → Decode</li><li>掌握部署命令</li></ul></div>
+
+  <div class="card">
+    <h3>🤔 为什么需要 PD 分离？</h3>
+    <div class="arch-diagram" style="font-size:.78rem;">
+      <strong>统一架构问题：</strong>同一批 GPU 同时处理 Prefill + Decode<br>
+      ❌ 长 prompt 的 Prefill 抢占 Decode 的计算资源<br>
+      ❌ Decode 的大量 KV Cache 挤压 Prefill 的 batch 空间<br><br>
+      <strong>PD 分离：</strong>
+      <div class="arch-row" style="justify-content:center;">
+        <div class="arch-box model">🖥️ Prefill 集群<br><small>计算优化 · TP=8 · H100</small></div>
+        <span class="arch-arrow">→ KV Cache →</span>
+        <div class="arch-box worker">💾 Decode 集群<br><small>内存优化 · TP=8 · H200</small></div>
+      </div>
+      ✅ Prefill 用 H100（算力强）| Decode 用 H200（显存大）<br>
+      ✅ 高峰期扩 Prefill，长对话扩 Decode（<strong>非对称扩缩</strong>）
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🔧 PD 分离部署</h3>
+    <div class="collapsible open"><button class="collapse-trigger" onclick="toggleCollapse(this)">Prefill 节点 <span class="arrow">▼</span></button><div class="collapse-content"><pre style="background:#134e4a;color:#e2e8f0;padding:12px;border-radius:8px;">python -m sglang.launch_server \
+  --model-path Qwen/Qwen2.5-72B-Instruct \
+  --disaggregation-mode prefill \
+  --tp 8 --port 30001</pre></div></div>
+    <div class="collapsible"><button class="collapse-trigger" onclick="toggleCollapse(this)">Decode 节点 <span class="arrow">▼</span></button><div class="collapse-content"><pre style="background:#134e4a;color:#e2e8f0;padding:12px;border-radius:8px;">python -m sglang.launch_server \
+  --model-path Qwen/Qwen2.5-72B-Instruct \
+  --disaggregation-mode decode \
+  --tp 8 \
+  --prefill-url http://&lt;prefill_ip&gt;:30001 \
+  --port 30002</pre></div></div>
+  </div>
+
+  <div class="takeaways-box"><div class="tk-label">📝 要点回顾</div><ul><li>PD 分离 = Prefill 和 Decode <strong>各自优化、独立扩缩</strong></li><li>SGLang 用 <code>--disaggregation-mode</code> 一键配置</li><li>非对称扩缩是最大优势</li></ul></div>
+
+  <div class="section-nav"><button class="nav-btn" onclick="switchTab('architecture')">← 核心架构</button><button class="nav-btn" onclick="switchTab('router')">下一节：Router & 分布式 →</button></div>
+</section>
+
+<!-- SECTION 6: Router & 分布式 -->
+<section class="section container" id="sec-router">
+  <h2 class="section-title">🧭 sgl-router & 分布式部署</h2>
+  <p class="section-desc">SGLang 的杀手锏--缓存感知负载均衡器（Rust 实现）。</p>
+  <div class="objectives-box"><div class="obj-label">🎯 本模块学习目标</div><ul><li>区分<strong>传统 LB</strong>（轮询） vs <strong>sgl-router</strong>（缓存感知）</li><li>理解 sgl-router 如何<strong>追踪 Radix Tree 状态</strong></li><li>掌握 Ray 多机部署</li></ul></div>
+
+  <div class="card">
+    <h3>🧠 缓存感知 vs 传统负载均衡</h3>
+    <table class="comparison-table">
+      <thead><tr><th>维度</th><th>传统 LB (Nginx)</th><th>sgl-router</th></tr></thead>
+      <tbody>
+        <tr><td><strong>路由依据</strong></td><td>连接数 / 轮询</td><td><strong>Radix Tree 缓存状态</strong></td></tr>
+        <tr><td><strong>缓存命中</strong></td><td>随机，经常 miss</td><td><strong>优先路由到已缓存的 Worker</strong></td></tr>
+        <tr><td><strong>实现</strong></td><td>C/C++</td><td><strong>Rust</strong>（内存安全 + 高性能）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>🌐 Ray 多机部署</h3>
+    <pre style="background:#134e4a;color:#e2e8f0;padding:14px;border-radius:8px;font-size:.8rem;line-height:1.6;"><span style="color:#94a3b8;"># 头节点</span>
+ray start --head --port=6379
+<span style="color:#94a3b8;"># Worker 节点</span>
+ray start --address='&lt;head_ip&gt;:6379'
+<span style="color:#94a3b8;"># 启动 SGLang（TP=8 跨 8 卡）</span>
+python -m sglang.launch_server \
+  --model-path meta-llama/Llama-3.1-70B-Instruct \
+  --tp 8 --port 30000</pre>
+  </div>
+
+  <div class="takeaways-box"><div class="tk-label">📝 要点回顾</div><ul><li>sgl-router = <strong>缓存感知</strong>，优先发到缓存命中的 Worker</li><li>多机用 Ray 集群，上层用 sgl-router 智能路由</li></ul></div>
+
+  <div class="section-nav"><button class="nav-btn" onclick="switchTab('pd-separation')">← PD 分离</button><button class="nav-btn" onclick="switchTab('deployment')">下一节：部署实战 →</button></div>
+</section>
+
+<!-- SECTION 7: 部署实战 -->
+<section class="section container" id="sec-deployment">
+  <h2 class="section-title">🚀 部署实战</h2>
+  <p class="section-desc">从安装到生产部署，SGLang 完整操作手册。</p>
+  <div class="objectives-box"><div class="obj-label">🎯 本模块学习目标</div><ul><li>独立完成安装 → 启动 → API 调用</li><li>理解每个参数的白话含义</li><li>掌握 Docker 和 Python API</li></ul></div>
+
+  <div class="card">
+    <h3>📦 标准部署流程</h3>
+    <div class="collapsible open"><button class="collapse-trigger" onclick="toggleCollapse(this)">① 安装 <span class="arrow">▼</span></button><div class="collapse-content"><pre style="background:#134e4a;color:#e2e8f0;padding:10px;border-radius:8px;">pip install sglang[all]
+<span style="color:#94a3b8;"># 或 Docker（生产推荐）</span>
+docker pull lmsysorg/sglang:latest</pre></div></div>
+    <div class="collapsible"><button class="collapse-trigger" onclick="toggleCollapse(this)">② 单机启动 <span class="arrow">▼</span></button><div class="collapse-content"><pre style="background:#134e4a;color:#e2e8f0;padding:10px;border-radius:8px;">python -m sglang.launch_server \
+  --model-path Qwen/Qwen2.5-7B-Instruct \
+  --tp 2 --port 30000 \
+  --enable-metrics</pre></div></div>
+    <div class="collapsible"><button class="collapse-trigger" onclick="toggleCollapse(this)">③ API 调用 <span class="arrow">▼</span></button><div class="collapse-content"><pre style="background:#134e4a;color:#e2e8f0;padding:10px;border-radius:8px;">curl http://localhost:30000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"default",
+  "messages":[{"role":"user","content":"Hello!"}],
+  "max_tokens":100}'</pre></div></div>
+  </div>
+
+  <div class="card">
+    <h3>🔤 命令 → 白话翻译</h3>
+    <div class="code-translation">
+      <div class="ct-code"><div class="ct-label code-label">💻 命令</div><code>python -m sglang.launch_server</code></div>
+      <div class="ct-plain"><div class="ct-label plain-label">🗣️ 白话</div>"启动 SGLang 推理服务"（= vLLM 的 <code>vllm serve</code>）</div>
+      <div class="ct-code"><code>--model-path Qwen/Qwen2.5-7B-Instruct</code></div>
+      <div class="ct-plain">"加载 Qwen 2.5 70亿参数模型"（HuggingFace 路径）</div>
+      <div class="ct-code"><code>--tp 2</code></div>
+      <div class="ct-plain">"用 2 张 GPU 做 Tensor Parallelism"（SGLang 用 <code>--tp</code>，vLLM 用 <code>--tensor-parallel-size</code>）</div>
+      <div class="ct-code"><code>--host 0.0.0.0 --port 30000</code></div>
+      <div class="ct-plain">"监听所有网卡的 30000 端口"（SGLang 默认 30000，vLLM 默认 8000）</div>
+      <div class="ct-code"><code>--enable-metrics</code></div>
+      <div class="ct-plain">"开启 Prometheus 监控指标"（排查问题必备，生产环境始终开启）</div>
+    </div>
+  </div>
+
+  <div class="takeaways-box"><div class="tk-label">📝 要点回顾</div><ul><li>启动命令：<code>python -m sglang.launch_server</code>（不是 CLI）</li><li>默认端口 <strong>30000</strong>，API 兼容 OpenAI</li><li><code>--enable-metrics</code> 始终开启</li></ul></div>
+
+  <div class="section-nav"><button class="nav-btn" onclick="switchTab('router')">← Router</button><button class="nav-btn" onclick="switchTab('vs-vllm')">下一节：vLLM 对比 →</button></div>
+</section>
+
+<!-- SECTION 8: vLLM 对比 -->
+<section class="section container" id="sec-vs-vllm">
+  <h2 class="section-title">⚔️ SGLang vs vLLM 全面对比</h2>
+  <p class="section-desc">FDE 核心决策能力：什么时候选 SGLang，什么时候选 vLLM？</p>
+  <div class="objectives-box"><div class="obj-label">🎯 本模块学习目标</div><ul><li>掌握<strong>8 个维度</strong>的详细对比</li><li>根据<strong>业务场景</strong>做出正确引擎选型</li><li>两者<strong>互补</strong>，不是替代</li></ul></div>
+
+  <div class="card">
+    <h3>📊 全方位对比</h3>
+    <table class="comparison-table">
+      <thead><tr><th>维度</th><th>vLLM</th><th>SGLang</th><th>赢家</th></tr></thead>
+      <tbody>
+        <tr><td><strong>核心创新</strong></td><td>PagedAttention</td><td>RadixAttention</td><td>各有千秋</td></tr>
+        <tr><td><strong>前缀共享</strong></td><td>Prefix Caching（需配置）</td><td>Radix Tree 自动复用</td><td>🏆 SGLang</td></tr>
+        <tr><td><strong>通用场景</strong></td><td>成熟稳定，社区大</td><td>追赶中</td><td>🏆 vLLM</td></tr>
+        <tr><td><strong>结构化输出</strong></td><td>需外部工具</td><td>原生内置</td><td>🏆 SGLang</td></tr>
+        <tr><td><strong>社区生态</strong></td><td>2000+ 贡献者</td><td>LMSYS 维护</td><td>🏆 vLLM</td></tr>
+        <tr><td><strong>文档质量</strong></td><td>详细完整</td><td>不如 vLLM</td><td>🏆 vLLM</td></tr>
+        <tr><td><strong>部署简便</strong></td><td><code>vllm serve</code> CLI</td><td><code>python -m</code></td><td>🏆 vLLM</td></tr>
+        <tr><td><strong>Router</strong></td><td>需外部 LB</td><td>sgl-router（缓存感知）</td><td>🏆 SGLang</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>🎯 FDE 选型决策树</h3>
+    <div class="arch-diagram" style="font-size:.78rem;line-height:2.1;">
+      <strong>SGLang 还是 vLLM？</strong><br>
+      ├─ 有共享 system prompt / few-shot / 多轮对话？→ <strong>🏆 SGLang</strong><br>
+      ├─ 需要结构化 JSON 输出？→ <strong>🏆 SGLang</strong><br>
+      ├─ 多 Worker 需缓存感知路由？→ <strong>🏆 SGLang</strong><br>
+      ├─ 通用聊天场景，无共享前缀？→ <strong>🏆 vLLM</strong><br>
+      ├─ 团队刚入门，需完善文档？→ <strong>🏆 vLLM</strong><br>
+      └─ 不确定？→ <strong>两个都试</strong>，用 <code>bench_serving.py</code> 实测再定
+    </div>
+  </div>
+
+  <!-- 调度方式对比 -->
+  <div class="card">
+    <h3>⚡ 调度方式对比：Busy Loop vs 零开销调度</h3>
+    <p style="font-size:.83rem;color:var(--text-secondary);margin-bottom:12px;">
+      两种引擎最根本的架构差异之一：<strong>运行时每步决策（vLLM）vs 请求进入时一次规划（SGLang）</strong>。
+    </p>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">vLLM Busy Loop：每步重新决策</h4>
+    <div class="arch-diagram" style="font-size:.74rem;line-height:1.7;">
+<pre style="background:transparent;">
+while True:
+    ① 扫 waiting queue -- 有新请求吗？
+    ② 扫 running queue -- 谁还在跑？
+    ③ 算 token 预算 + 数 free blocks
+    ④ <strong>调度决策</strong> -- 这轮该算谁？能算多少？
+    ⑤ 准备 batch (拼接 input + position_ids + block_diagonal_mask)
+    ⑥ forward pass → 采样 → 释放完成的 blocks
+    ⑦ 回到 ① -- <strong>下一轮重新决策</strong>
+
+每一轮 iteration 都是完整的"决策 → 执行"周期
+即使 running queue 连续两轮没变，也要走一遍决策逻辑
+高并发时 CPU 调度开销不可忽略
+</pre>
+    </div>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">SGLang 零开销调度：请求进入时一次规划</h4>
+    <div class="arch-diagram" style="font-size:.74rem;line-height:1.7;">
+<pre style="background:transparent;">
+请求进入 SGLang:
+  ① Radix Tree 查找 → "哪些 token 已有缓存？从哪开始是新 token？"
+  ② 精确知道：需要多少新 KV blocks、需要多久 Prefill
+
+  → <strong>编译时生成执行计划</strong>（一次完成，不再改变）:
+     Step 1: 分配 blocks → Prefill 新 token
+     Step 2-N: Decode (每步 1 token)
+
+运行时:
+  每步直接按计划执行 → <strong>不需要重新决策</strong>
+  CPU 开销几乎为零（只发指令不决策）
+</pre>
+    </div>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">核心差异</h4>
+    <table class="comparison-table" style="font-size:.8rem;">
+      <thead><tr><th>维度</th><th>vLLM Busy Loop</th><th>SGLang 零开销</th></tr></thead>
+      <tbody>
+        <tr><td><strong>决策时机</strong></td><td>每步 iteration 动态决策</td><td>请求进入时一次规划</td></tr>
+        <tr><td><strong>决策依据</strong></td><td>free blocks + token 预算 + 优先级</td><td>Radix Tree 缓存命中 + 预编译计划</td></tr>
+        <tr><td><strong>CPU 开销</strong></td><td>每步 ~0.1-0.5ms</td><td>每步 ~0.01ms</td></tr>
+        <tr><td><strong>灵活性</strong></td><td>高（可随时调整优先级、抢占）</td><td>较低（计划固定）</td></tr>
+        <tr><td><strong>前提条件</strong></td><td>无特殊要求</td><td>依赖 Radix Tree 提供精确前缀命中信息</td></tr>
+      </tbody>
+    </table>
+
+    <div class="fde-callout" style="margin-top:8px;">
+      <div class="clabel">🔑 根本原因</div>
+      vLLM 的<strong>哈希表</strong>只能回答"某个 16-token block 在不在"（碎片化信息），无法告诉你"前 200 个 token 全命中，从第 201 个开始是新内容"。SGLang 的<strong>Radix Tree</strong>沿着树走一次就知道完整的命中和分叉点（连续信息）。<strong>信息粒度不同 → 决策方式不同。</strong>
+    </div>
+  </div>
+
+  <div class="takeaways-box"><div class="tk-label">📝 要点回顾</div><ul><li>SGLang 胜在<strong>共享前缀场景</strong></li><li>vLLM 胜在<strong>通用场景和成熟度</strong></li><li>vLLM: 运行时每步决策（灵活，CPU 有开销）</li><li>SGLang: 编译时一次规划（零开销，依赖 Radix Tree）</li><li>最佳实践 = <strong>两个都部署</strong>，按场景路由</li></ul></div>
+
+  <div class="section-nav"><button class="nav-btn" onclick="switchTab('deployment')">← 部署实战</button><button class="nav-btn" onclick="switchTab('cheatsheet')">下一节：FDE 速查 →</button></div>
+</section>
+
+<!-- SECTION 9: FDE 速查 -->
+<section class="section container" id="sec-cheatsheet">
+  <h2 class="section-title">📋 FDE 速查手册</h2>
+  <p class="section-desc">SGLang 日常命令和排查速查。</p>
+  <div class="cheat-grid">
+    <div class="cheat-item"><h4>🚀 快速启动</h4><pre>python -m sglang.launch_server \
+  --model-path &lt;model&gt; \
+  --tp 1 --port 30000</pre></div>
+    <div class="cheat-item"><h4>🏥 健康检查</h4><pre>curl http://localhost:30000/health
+curl http://localhost:30000/v1/models
+curl http://localhost:30000/metrics</pre></div>
+    <div class="cheat-item"><h4>📊 Benchmark</h4><pre>python3 bench_serving.py \
+  --backend sglang \
+  --base-url http://localhost:30000 \
+  --num-prompts 200 \
+  --request-rate 5</pre></div>
+    <div class="cheat-item"><h4>🔀 PD 分离</h4><pre># Prefill
+--disaggregation-mode prefill
+# Decode
+--disaggregation-mode decode
+--prefill-url http://&lt;ip&gt;:30001</pre></div>
+    <div class="cheat-item"><h4>🧭 sgl-router</h4><pre>python -m sglang.launch_router \
+  --worker-urls http://w1:30000 \
+               http://w2:30000 \
+  --port 8080</pre></div>
+    <div class="cheat-item"><h4>🐳 Docker</h4><pre>docker run --gpus all \
+  -p 30000:30000 \
+  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  lmsysorg/sglang:latest</pre></div>
+    <div class="cheat-item"><h4>📈 关键指标</h4><pre>sglang_num_requests_waiting
+sglang_time_to_first_token
+sglang_radix_tree_size</pre></div>
+    <div class="cheat-item"><h4>🔧 调试</h4><pre>--log-level debug
+SGLANG_LOG_LEVEL=DEBUG
+--enable-metrics</pre></div>
+  </div>
+
+  <div class="section-nav"><button class="nav-btn" onclick="switchTab('vs-vllm')">← vLLM 对比</button><button class="nav-btn" onclick="switchTab('quiz')">下一节：自测挑战 →</button></div>
+</section>
+
+<!-- SECTION 10: 自测挑战 -->
+<section class="section container" id="sec-quiz">
+  <h2 class="section-title">🧪 自测挑战</h2>
+  <p class="section-desc">8 道题覆盖 SGLang 核心概念，答完即时出分。</p>
+  <div id="quizContainer"></div>
+  <div id="quizResult" style="display:none;"></div>
+  <div class="section-nav"><button class="nav-btn" onclick="switchTab('cheatsheet')">← FDE 速查</button><span></span></div>
+</section>
+
+<button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">⬆</button>
+
+<script>
+const TAB_ORDER=['roadmap','overview','radix','architecture','pd-separation','router','deployment','vs-vllm','cheatsheet','quiz'];
+const TOTAL_MODULES=10;
+const explored=new Set(['roadmap']);
+
+function switchTab(target){
+  document.querySelectorAll('.tab-btn').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  const btn=document.querySelector(`[data-tab="${target}"]`);if(btn)btn.classList.add('active');
+  const sec=document.getElementById('sec-'+target);if(sec)sec.classList.add('active');
+  explored.add(target);updateProgress();window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('.tab-btn').forEach(tab=>{tab.addEventListener('click',()=>switchTab(tab.dataset.tab));});
+document.querySelectorAll('.roadmap-step').forEach(step=>{step.addEventListener('click',()=>{const t=step.dataset.goto;if(t)switchTab(t);});});
+function updateProgress(){
+  const pct=Math.round((explored.size/TOTAL_MODULES)*100);
+  document.getElementById('progressFill').style.width=pct+'%';
+  document.getElementById('progressText').textContent='已探索 '+explored.size+' / '+TOTAL_MODULES+' 个模块';
+  document.querySelectorAll('.roadmap-step').forEach(step=>{if(step.dataset.goto&&explored.has(step.dataset.goto))step.classList.add('done');});
+}
+
+function toggleCollapse(btn){btn.closest('.collapsible').classList.toggle('open');}
+
+function toggleCheck(li){
+  li.classList.toggle('checked');const c={};
+  document.querySelectorAll('.checklist li').forEach(l=>{if(l.classList.contains('checked'))c[l.dataset.key]=true;});
+  localStorage.setItem('sglang-checklist',JSON.stringify(c));
+}
+try{const s=JSON.parse(localStorage.getItem('sglang-checklist')||'{}');document.querySelectorAll('.checklist li').forEach(li=>{if(s[li.dataset.key])li.classList.add('checked');});}catch(e){}
+
+function replayChat(){
+  const msgs=document.querySelectorAll('#chatThread .chat-msg');
+  msgs.forEach(m=>m.classList.remove('visible'));
+  msgs.forEach((m,i)=>setTimeout(()=>m.classList.add('visible'),i*700));
+}
+setTimeout(()=>replayChat(),600);
+
+const quizData=[
+  {q:'SGLang 最核心的技术创新是什么？',options:['PagedAttention','RadixAttention（前缀树自动缓存复用）','Continuous Batching','Speculative Decoding'],answer:1,explain:'RadixAttention 用 Radix Tree 自动管理跨请求的 KV Cache 共享，前缀匹配即可复用。'},
+  {q:'RadixAttention 相比 PagedAttention 的核心优势是什么？',options:['运行更快','自动跨请求去重相同前缀的 KV Cache','不需要 GPU','能训练模型'],answer:1,explain:'PagedAttention 管单序列内碎片，RadixAttention 管多序列间冗余。共享前缀场景优势明显。'},
+  {q:'以下哪个场景 SGLang 最有优势？',options:['所有请求完全不同','大量用户共享相同 system prompt','模型训练','CPU 推理'],answer:1,explain:'共享 system prompt 是 RadixAttention 的最佳场景--前缀树自动去重，不需要每个请求重新计算。'},
+  {q:'sgl-router 与传统 LB (Nginx) 的核心区别是什么？',options:['更快','缓存感知：根据 Radix Tree 状态路由到缓存命中的 Worker','免费','无区别'],answer:1,explain:'sgl-router 追踪每个 Worker 的 RadixAttention 缓存状态，把请求发到缓存命中率最高的 Worker。'},
+  {q:'PD 分离中，Prefill 和 Decode 节点的硬件需求有什么不同？',options:['完全相同','Prefill 需更强算力(H100)，Decode 需更大显存(H200)','都不需要 GPU','相反'],answer:1,explain:'Prefill 一次性处理整个 prompt，计算密集；Decode 逐 token 生成，瓶颈在 KV Cache 读取。PD 分离让两者各自用最优硬件。'},
+  {q:'SGLang 启动服务用什么命令？',options:['sglang serve','python -m sglang.launch_server','sglang start','pip install sglang'],answer:1,explain:'SGLang 用 Python 模块方式启动：<code>python -m sglang.launch_server</code>，与 vLLM 的 CLI 方式不同。'},
+  {q:'SGLang 和 vLLM 是什么关系？',options:['替代品','互补关系，各有优势场景','完全相同','旧版本'],answer:1,explain:'共享前缀多 → SGLang；通用场景 → vLLM。最佳实践是两个都部署，按场景路由。'},
+  {q:'SGLang 默认端口是多少？',options:['8000','30000','8080','6379'],answer:1,explain:'SGLang 默认 30000（vLLM 默认 8000）。访问 <code>/v1/models</code> 查看可用模型列表。'}
+];
+
+function buildQuiz(){
+  const c=document.getElementById('quizContainer');c.innerHTML='';
+  quizData.forEach((item,idx)=>{
+    const card=document.createElement('div');card.className='quiz-card';card.id='quiz-'+idx;
+    card.innerHTML=`<div class="quiz-question">Q${idx+1}. ${item.q}</div>${item.options.map((opt,oi)=>`<button class="quiz-option" onclick="selectAnswer(this,${idx},${oi})">${String.fromCharCode(65+oi)}. ${opt}</button>`).join('')}<div class="quiz-feedback" id="feedback-${idx}"></div>`;
+    c.appendChild(card);
+  });
+}
+const quizState={};
+function selectAnswer(btn,qIdx,oIdx){
+  if(quizState[qIdx]!==undefined)return;
+  const card=document.getElementById('quiz-'+qIdx),opts=card.querySelectorAll('.quiz-option'),correct=quizData[qIdx].answer,fb=document.getElementById('feedback-'+qIdx);
+  opts.forEach(o=>o.classList.add('disabled'));
+  if(oIdx===correct){quizState[qIdx]=true;btn.classList.add('correct-answer');card.classList.add('correct');fb.className='quiz-feedback correct show';fb.textContent='✅ '+quizData[qIdx].explain;}
+  else{quizState[qIdx]=false;btn.classList.add('wrong-answer');opts[correct].classList.add('correct-answer');card.classList.add('wrong');fb.className='quiz-feedback wrong show';fb.textContent='❌ 答案是 '+String.fromCharCode(65+correct)+'。'+quizData[qIdx].explain;}
+  checkAllAnswered();
+}
+function checkAllAnswered(){
+  const a=Object.keys(quizState).length;
+  if(a===quizData.length){
+    const score=Object.values(quizState).filter(Boolean).length,rd=document.getElementById('quizResult');rd.style.display='block';
+    let emoji,msg,bg,color;
+    if(score>=7){emoji='🏆';msg='优秀！FDE SGLang 面试稳了！';bg='#f0fdf4';color='#065f46';}
+    else if(score>=5){emoji='👍';msg='不错！重点复习 RadixAttention 和 PD 分离。';bg='#fffbeb';color='#92400e';}
+    else{emoji='📚';msg='建议从头系统学习，从 RadixAttention 开始。';bg='#fef2f2';color='#991b1b';}
+    rd.innerHTML=`<div class="quiz-score" style="background:${bg};color:${color};">${emoji} 得分：${score} / ${quizData.length}<br><span style="font-size:.85rem;font-weight:400;">${msg}</span></div>`;
+  }
+}
+window.addEventListener('scroll',()=>{document.getElementById('scrollTop').classList.toggle('visible',window.scrollY>500);});
+buildQuiz();updateProgress();
+</script>
+</body>
+</html>

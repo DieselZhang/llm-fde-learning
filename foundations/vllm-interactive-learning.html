@@ -1,0 +1,2057 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>vLLM 交互式学习中心 | FDE 定向</title>
+<style>
+/* ===== Reset & Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #4f46e5; --primary-dark: #3730a3; --primary-light: #eef2ff;
+  --accent: #d97706; --success: #059669; --danger: #dc2626; --info: #2563eb;
+  --bg: #fafaf9; --surface: #fff; --surface-alt: #f5f5f4; --border: #e7e5e4;
+  --text: #1c1917; --text-secondary: #57534e; --text-muted: #a8a29e;
+  --radius: 10px; --radius-sm: 6px;
+  --shadow-sm: 0 1px 2px rgba(28,25,23,.04);
+  --shadow: 0 1px 3px rgba(28,25,23,.05), 0 1px 2px rgba(28,25,23,.04);
+  --shadow-md: 0 4px 12px rgba(28,25,23,.06), 0 1px 2px rgba(28,25,23,.04);
+  --shadow-lg: 0 12px 32px rgba(28,25,23,.08), 0 2px 4px rgba(28,25,23,.04);
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.75; min-height: 100vh;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== Global Noise Texture ===== */
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.025'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* ===== Header ===== */
+.header {
+  background: linear-gradient(165deg, #18181b 0%, #27272a 50%, #1c1917 100%);
+  color: #fafaf9; padding: 56px 24px 40px; text-align: center; position: relative; overflow: hidden;
+}
+.header::before {
+  content:""; position:absolute; inset:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 30% 20%, rgba(79,70,229,.12) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 70% 80%, rgba(13,148,136,.08) 0%, transparent 60%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events:none;
+}
+.header h1 { font-size: 2.5rem; font-weight: 800; letter-spacing: -.03em; margin-bottom: 8px; position: relative; line-height: 1.2; }
+.header .subtitle { font-size: 1.05rem; opacity: .8; position: relative; font-weight: 400; letter-spacing: -.01em; }
+.header .who-for { font-size: .82rem; opacity: .5; margin-top: 8px; position: relative; font-weight: 400; }
+.badge-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px; position: relative; }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: 6px; font-size: .78rem; font-weight: 600; letter-spacing: .01em; }
+.badge-fde { background: rgba(217,119,6,.15); color: #fbbf24; border: 1px solid rgba(217,119,6,.2); }
+.badge-vllm { background: rgba(79,70,229,.15); color: #a5b4fc; border: 1px solid rgba(79,70,229,.2); }
+.badge-begin { background: rgba(5,150,105,.15); color: #6ee7b7; border: 1px solid rgba(5,150,105,.2); }
+
+/* ===== Container ===== */
+.container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+/* ===== Progress ===== */
+.progress-wrap { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); padding: 12px 0; }
+.progress-bar { height: 3px; background: var(--border); border-radius: 0; overflow: hidden; max-width: 1100px; margin: 0 auto; }
+.progress-fill { height: 100%; background: var(--primary); border-radius: 0; transition: width .5s cubic-bezier(.16,1,.3,1); }
+.progress-text { text-align: center; font-size: .75rem; color: var(--text-muted); margin-top: 6px; font-weight: 500; }
+
+/* ===== Tabs ===== */
+.tab-nav { display: flex; gap: 4px; flex-wrap: wrap; padding: 12px 0 0; border-bottom: 1px solid var(--border); position: sticky; top: 49px; background: rgba(250,250,249,.9); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 99; }
+.tab-btn { padding: 9px 16px; border: none; background: none; font-size: .8rem; font-weight: 500; color: var(--text-secondary); cursor: pointer; border-radius: 8px 8px 0 0; transition: all .2s cubic-bezier(.16,1,.3,1); white-space: nowrap; letter-spacing: .01em; }
+.tab-btn:hover { color: var(--text); background: var(--surface-alt); }
+.tab-btn.active { color: var(--primary); background: var(--surface); box-shadow: 0 -2px 0 var(--primary); font-weight: 600; }
+.tab-btn .t-icon { margin-right: 4px; }
+
+/* ===== Section ===== */
+.section { display: none; padding: 36px 0 60px; }
+.section.active { display: block; }
+.section-title { font-size: 1.75rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -.02em; line-height: 1.25; }
+.section-desc { color: var(--text-secondary); margin-bottom: 32px; font-size: .95rem; max-width: 650px; line-height: 1.7; }
+
+/* ===== Cards ===== */
+.card { background: var(--surface); border-radius: var(--radius); padding: 26px; margin-bottom: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); transition: box-shadow .3s cubic-bezier(.16,1,.3,1), transform .3s cubic-bezier(.16,1,.3,1); }
+.card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+.card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; letter-spacing: -.01em; }
+.card h3 .emoji { font-size: 1.15rem; }
+
+/* FDE Callout */
+.fde-callout { background: linear-gradient(135deg, #fffbeb, #fef3c7); border-left: 3px solid var(--accent); border-radius: var(--radius); padding: 16px 20px; margin: 16px 0; font-size: .87rem; box-shadow: var(--shadow-sm); }
+.fde-callout strong { color: #92400e; }
+.fde-callout .clabel { display: inline-block; background: var(--accent); color: #fff; padding: 3px 12px; border-radius: 4px; font-size: .7rem; font-weight: 700; margin-bottom: 8px; letter-spacing: .04em; }
+
+/* Info Callout */
+.info-callout { background: linear-gradient(135deg, #eff6ff, #dbeafe); border-left: 3px solid var(--info); border-radius: var(--radius); padding: 16px 20px; margin: 16px 0; font-size: .87rem; box-shadow: var(--shadow-sm); }
+.info-callout strong { color: #1e40af; }
+.info-callout .clabel { display: inline-block; background: var(--info); color: #fff; padding: 3px 12px; border-radius: 4px; font-size: .7rem; font-weight: 700; margin-bottom: 8px; letter-spacing: .04em; }
+
+/* ===== Architecture Diagram ===== */
+.arch-diagram { display: flex; flex-direction: column; gap: 10px; padding: 18px; background: var(--surface-alt); border-radius: var(--radius); margin: 14px 0; font-family: "SF Mono","Fira Code","JetBrains Mono",monospace; font-size: .8rem; overflow-x: auto; border: 1px solid var(--border); }
+.arch-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.arch-box { padding: 8px 16px; border-radius: 6px; font-weight: 600; text-align: center; min-width: 90px; transition: all .25s cubic-bezier(.16,1,.3,1); cursor: pointer; position: relative; font-size: .82rem; }
+.arch-box:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.arch-box.api { background: #eef2ff; color: #3730a3; border: 1.5px solid #c7d2fe; }
+.arch-box.engine { background: #faf5ff; color: #6b21a8; border: 1.5px solid #e9d5ff; }
+.arch-box.worker { background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; }
+.arch-box.model { background: #fdf2f8; color: #9d174d; border: 1.5px solid #fbcfe8; }
+.arch-box.kv { background: #fef3c7; color: #92400e; border: 1.5px solid #fde68a; }
+.arch-arrow { color: var(--text-muted); font-size: 1.1rem; flex-shrink: 0; }
+.arch-label { font-size: .68rem; color: var(--text-muted); text-align: center; margin-top: 2px; }
+
+/* ===== Collapsible ===== */
+.collapsible { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; overflow: hidden; background: var(--surface); transition: box-shadow .2s; }
+.collapsible:hover { box-shadow: var(--shadow-sm); }
+.collapsible.open { box-shadow: var(--shadow-sm); }
+.collapse-trigger { width: 100%; padding: 14px 18px; background: none; border: none; text-align: left; font-size: .9rem; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: var(--text); transition: background .2s; letter-spacing: -.01em; }
+.collapse-trigger:hover { background: var(--surface-alt); }
+.collapse-trigger .arrow { transition: transform .3s cubic-bezier(.16,1,.3,1); font-size: .7rem; color: var(--text-muted); }
+.collapsible.open .collapse-trigger .arrow { transform: rotate(180deg); }
+.collapse-content { max-height: 0; overflow: hidden; transition: max-height .45s cubic-bezier(.16,1,.3,1), padding .45s cubic-bezier(.16,1,.3,1); }
+.collapsible.open .collapse-content { max-height: 2000px; padding: 0 18px 18px; }
+
+/* ===== Tables ===== */
+.comparison-table { width: 100%; border-collapse: collapse; font-size: .84rem; margin: 10px 0; border-radius: var(--radius); overflow: hidden; }
+.comparison-table th { background: var(--surface-alt); padding: 10px 14px; text-align: left; font-weight: 700; border-bottom: 2px solid var(--border); font-size: .78rem; letter-spacing: .02em; color: var(--text-secondary); }
+.comparison-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.comparison-table tr:hover td { background: #fafaf9; }
+
+/* ===== Flow Phase ===== */
+.flow-phase { border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 6px; overflow: hidden; background: var(--surface); transition: box-shadow .2s; }
+.flow-phase:hover { box-shadow: var(--shadow-sm); }
+.phase-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; transition: background .2s; user-select: none; }
+.phase-header:hover { background: var(--surface-alt); }
+.phase-num { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: var(--primary); color: #fff; border-radius: 50%; font-size: .75rem; font-weight: 700; flex-shrink: 0; }
+.phase-title { flex: 1; font-weight: 600; font-size: .88rem; }
+.phase-time { font-size: .72rem; color: var(--text-muted); flex-shrink: 0; font-weight: 500; }
+.phase-header .arrow { font-size: .65rem; color: var(--text-muted); transition: transform .3s cubic-bezier(.16,1,.3,1); }
+.flow-phase.open .phase-header .arrow { transform: rotate(180deg); }
+.phase-body { max-height: 0; overflow: hidden; transition: max-height .45s cubic-bezier(.16,1,.3,1), padding .45s cubic-bezier(.16,1,.3,1); padding: 0 16px; font-size: .83rem; }
+.flow-phase.open .phase-body { max-height: 800px; padding: 0 16px 14px; }
+
+/* ===== Config Grid ===== */
+.config-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.config-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow-sm); transition: box-shadow .25s, transform .25s; }
+.config-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+.config-card .param { font-family: "SF Mono","Fira Code","JetBrains Mono",monospace; background: var(--surface-alt); padding: 3px 10px; border-radius: 4px; font-size: .78rem; color: var(--primary-dark); font-weight: 600; letter-spacing: -.01em; }
+.config-card .desc { font-size: .83rem; color: var(--text-secondary); margin-top: 8px; line-height: 1.6; }
+.config-card .impact { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: .7rem; font-weight: 700; margin-top: 8px; letter-spacing: .04em; }
+.impact-high { background: #fef2f2; color: #991b1b; }
+.impact-med { background: #fffbeb; color: #92400e; }
+.impact-low { background: #f0fdf4; color: #065f46; }
+
+/* ===== Quiz ===== */
+.quiz-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 14px; transition: all .3s cubic-bezier(.16,1,.3,1); }
+.quiz-card.correct { border-color: var(--success); background: #f0fdf4; }
+.quiz-card.wrong { border-color: var(--danger); background: #fef2f2; }
+.quiz-question { font-weight: 700; margin-bottom: 16px; font-size: .98rem; letter-spacing: -.01em; }
+.quiz-option { display: block; width: 100%; padding: 12px 16px; margin-bottom: 8px; background: var(--surface-alt); border: 1.5px solid transparent; border-radius: var(--radius-sm); text-align: left; font-size: .87rem; cursor: pointer; transition: all .2s cubic-bezier(.16,1,.3,1); }
+.quiz-option:hover:not(.disabled) { border-color: var(--primary); background: var(--primary-light); transform: translateX(2px); }
+.quiz-option.correct-answer { border-color: var(--success); background: #d1fae5; }
+.quiz-option.wrong-answer { border-color: var(--danger); background: #fee2e2; }
+.quiz-option.disabled { cursor: default; opacity: .7; }
+.quiz-feedback { margin-top: 12px; padding: 12px; border-radius: var(--radius-sm); font-size: .85rem; display: none; line-height: 1.6; }
+.quiz-feedback.show { display: block; }
+.quiz-feedback.correct { background: #d1fae5; color: #065f46; }
+.quiz-feedback.wrong { background: #fee2e2; color: #991b1b; }
+.quiz-score { text-align: center; font-size: 1.2rem; font-weight: 700; padding: 20px; margin-top: 6px; border-radius: var(--radius); }
+
+/* ===== Cheat Sheet ===== */
+.cheat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.cheat-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow-sm); transition: box-shadow .25s, transform .25s; }
+.cheat-item:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+.cheat-item h4 { font-size: .88rem; margin-bottom: 10px; color: var(--primary-dark); font-weight: 700; letter-spacing: -.01em; }
+.cheat-item code { background: var(--surface-alt); padding: 2px 6px; border-radius: 3px; font-size: .78rem; color: var(--danger); }
+.cheat-item pre { background: #1c1917; color: #e7e5e4; padding: 12px; border-radius: var(--radius-sm); font-size: .76rem; overflow-x: auto; margin: 8px 0; line-height: 1.6; }
+
+/* ===== Viz ===== */
+.viz-container { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+.viz-panel { flex: 1; min-width: 260px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow-sm); }
+.viz-blocks { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0; }
+.viz-block { width: 40px; height: 40px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: .65rem; font-weight: 700; cursor: pointer; color: #fff; transition: transform .15s; }
+.viz-block:hover { transform: scale(1.1); }
+.viz-block.free { background: #d6d3d1; }
+.viz-block.used { background: var(--primary); }
+.viz-block.shared { background: var(--success); }
+.viz-block.fragment { background: var(--accent); }
+.viz-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: .74rem; margin-top: 8px; }
+.viz-legend span { display: flex; align-items: center; gap: 4px; }
+.viz-legend .dot { width: 10px; height: 10px; border-radius: 2px; }
+
+/* ===== Learning Roadmap ===== */
+.roadmap { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; padding: 20px 0; }
+.roadmap-step { display: flex; align-items: center; gap: 8px; padding: 10px 18px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 8px; font-size: .82rem; font-weight: 600; cursor: pointer; transition: all .25s cubic-bezier(.16,1,.3,1); white-space: nowrap; box-shadow: var(--shadow-sm); }
+.roadmap-step:hover { border-color: var(--primary); background: var(--primary-light); transform: translateY(-2px); box-shadow: var(--shadow); }
+.roadmap-step .rs-num { width: 26px; height: 26px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: .72rem; font-weight: 700; flex-shrink: 0; }
+.roadmap-arrow { color: var(--text-muted); font-size: 1.1rem; align-self: center; }
+.roadmap-step.done { border-color: var(--success); background: #f0fdf4; }
+.roadmap-step.done .rs-num { background: var(--success); }
+
+/* ===== Prev/Next Nav ===== */
+.section-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border); }
+.nav-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 22px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 8px; font-size: .84rem; font-weight: 600; color: var(--text); cursor: pointer; transition: all .25s cubic-bezier(.16,1,.3,1); text-decoration: none; box-shadow: var(--shadow-sm); }
+.nav-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); transform: translateY(-1px); box-shadow: var(--shadow); }
+.nav-btn:active { transform: translateY(0) scale(.98); }
+.nav-btn.disabled { opacity: .3; cursor: default; pointer-events: none; }
+
+/* ===== Glossary tooltip ===== */
+.gloss {
+  border-bottom: 1.5px dashed var(--primary); cursor: help; color: var(--primary-dark);
+  position: relative; font-weight: 500;
+}
+.gloss:hover::after {
+  content: attr(data-def);
+  position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%);
+  background: #1c1917; color: #fafaf9; padding: 8px 14px; border-radius: 6px;
+  font-size: .76rem; white-space: nowrap; z-index: 10; pointer-events: none; font-weight: 400;
+}
+
+/* ===== Checklist ===== */
+.checklist { list-style: none; padding: 0; display: grid; gap: 4px; }
+.checklist li { padding: 8px 0; font-size: .87rem; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all .2s; border-radius: var(--radius-sm); }
+.checklist li:hover { background: var(--surface-alt); padding-left: 8px; }
+.checklist li .cb { width: 20px; height: 20px; border: 2px solid var(--border); border-radius: 4px; flex-shrink: 0; transition: all .2s cubic-bezier(.16,1,.3,1); }
+.checklist li.checked .cb { background: var(--success); border-color: var(--success); position: relative; }
+.checklist li.checked .cb::after { content: "✓"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: .68rem; font-weight: 700; }
+.checklist li.checked { color: var(--text-muted); text-decoration: line-through; }
+
+/* ===== Step illustration ===== */
+.step-illustration { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; padding: 20px; }
+.step-box { padding: 10px 18px; border-radius: 6px; font-weight: 700; font-size: .85rem; text-align: center; min-width: 80px; }
+.step-box.compute { background: #fdf2f8; color: #9d174d; border: 1.5px solid #fbcfe8; }
+.step-box.memory { background: #eef2ff; color: #3730a3; border: 1.5px solid #c7d2fe; }
+.step-box.output { background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; }
+
+/* ===== Learning Objectives ===== */
+.objectives-box {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border-left: 3px solid var(--success); border-radius: var(--radius);
+  padding: 16px 20px; margin-bottom: 24px; font-size: .85rem; box-shadow: var(--shadow-sm);
+}
+.objectives-box .obj-label { font-weight: 700; color: #065f46; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; font-size: .88rem; }
+.objectives-box ul { margin: 4px 0 0 18px; }
+.objectives-box li { margin-bottom: 4px; line-height: 1.6; }
+
+/* ===== Key Takeaways ===== */
+.takeaways-box {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border-left: 3px solid var(--info); border-radius: var(--radius);
+  padding: 16px 20px; margin: 24px 0 0; font-size: .85rem; box-shadow: var(--shadow-sm);
+}
+.takeaways-box .tk-label { font-weight: 700; color: #1e40af; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; font-size: .88rem; }
+.takeaways-box ul { margin: 4px 0 0 18px; }
+.takeaways-box li { margin-bottom: 4px; line-height: 1.6; }
+
+/* ===== Code <-> English Translation ===== */
+.code-translation {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+  border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+  margin: 14px 0; font-size: .82rem; box-shadow: var(--shadow-sm);
+}
+.code-translation .ct-code {
+  background: #1c1917; color: #e7e5e4; padding: 16px;
+  font-family: "SF Mono","Fira Code","JetBrains Mono",monospace; line-height: 1.6;
+}
+.code-translation .ct-plain {
+  background: #fafaf9; padding: 16px; line-height: 1.6;
+  color: var(--text-secondary); border-left: 1px solid var(--border);
+}
+.code-translation .ct-label {
+  font-size: .68rem; font-weight: 700; letter-spacing: .04em; margin-bottom: 8px;
+}
+.code-translation .ct-label.code-label { color: #a5b4fc; }
+.code-translation .ct-label.plain-label { color: var(--text-muted); }
+@media (max-width: 768px) { .code-translation { grid-template-columns: 1fr; } }
+
+/* ===== Group Chat Animation ===== */
+.chat-thread {
+  background: var(--surface-alt); border-radius: var(--radius); padding: 20px;
+  max-width: 620px; margin: 14px auto; font-size: .83rem; border: 1px solid var(--border);
+}
+.chat-msg {
+  display: flex; gap: 12px; margin-bottom: 16px; align-items: flex-start;
+  opacity: 0; transform: translateY(16px); transition: all .5s cubic-bezier(.16,1,.3,1);
+}
+.chat-msg.visible { opacity: 1; transform: translateY(0); }
+.chat-avatar {
+  width: 38px; height: 38px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; font-size: .9rem;
+  flex-shrink: 0; font-weight: 700; box-shadow: var(--shadow-sm);
+}
+.chat-avatar.api { background: #eef2ff; color: #3730a3; }
+.chat-avatar.engine { background: #faf5ff; color: #6b21a8; }
+.chat-avatar.worker { background: #ecfdf5; color: #065f46; }
+.chat-bubble {
+  background: var(--surface); padding: 12px 16px; border-radius: 10px;
+  box-shadow: var(--shadow-sm); max-width: 85%; line-height: 1.6;
+  border: 1px solid var(--border);
+}
+.chat-bubble .chat-name { font-weight: 700; font-size: .76rem; margin-bottom: 4px; }
+.chat-bubble .chat-name.api-name { color: #3730a3; }
+.chat-bubble .chat-name.engine-name { color: #6b21a8; }
+.chat-bubble .chat-name.worker-name { color: #065f46; }
+.chat-bubble code { background: var(--surface-alt); padding: 2px 6px; border-radius: 3px; font-size: .76rem; }
+.chat-replay { text-align: center; margin-top: 12px; }
+.chat-replay button {
+  padding: 9px 24px; background: var(--primary); color: #fff; border: none;
+  border-radius: 8px; cursor: pointer; font-weight: 600; font-size: .82rem;
+  transition: all .2s cubic-bezier(.16,1,.3,1); box-shadow: var(--shadow-sm);
+}
+.chat-replay button:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: var(--shadow); }
+.chat-replay button:active { transform: translateY(0) scale(.98); }
+
+/* ===== Quick Check ===== */
+.quick-check {
+  background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius);
+  padding: 20px; margin-top: 20px; transition: all .3s cubic-bezier(.16,1,.3,1);
+}
+.quick-check.correct { border-color: var(--success); background: #f0fdf4; }
+.quick-check.wrong { border-color: var(--danger); background: #fef2f2; }
+.quick-check .qc-q { font-weight: 700; font-size: .92rem; margin-bottom: 12px; letter-spacing: -.01em; }
+.quick-check .qc-opt {
+  display: inline-block; padding: 7px 16px; margin: 4px 8px 4px 0;
+  background: var(--surface-alt); border: 1.5px solid transparent; border-radius: 8px;
+  font-size: .82rem; cursor: pointer; transition: all .2s cubic-bezier(.16,1,.3,1);
+}
+.quick-check .qc-opt:hover { border-color: var(--primary); background: var(--primary-light); }
+.quick-check .qc-opt.chosen-correct { background: #d1fae5; border-color: var(--success); }
+.quick-check .qc-opt.chosen-wrong { background: #fee2e2; border-color: var(--danger); }
+.quick-check .qc-opt.disabled { pointer-events: none; opacity: .7; }
+.quick-check .qc-fb { margin-top: 10px; font-size: .83rem; display: none; line-height: 1.6; }
+.quick-check .qc-fb.show { display: block; }
+
+/* ===== Glossary ===== */
+.gloss-term {
+  border-bottom: 1.5px dashed var(--primary); cursor: help; color: var(--primary-dark);
+  position: relative; font-weight: 500;
+}
+.gloss-term:hover::after {
+  content: attr(data-def);
+  position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%);
+  background: #1c1917; color: #fafaf9; padding: 10px 16px; border-radius: 8px;
+  font-size: .76rem; white-space: normal; max-width: 320px; line-height: 1.5;
+  z-index: 10; pointer-events: none; text-align: left; font-weight: 400;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .header { padding: 40px 20px 32px; }
+  .header h1 { font-size: 1.5rem; }
+  .tab-btn { padding: 8px 12px; font-size: .73rem; }
+  .config-grid, .cheat-grid { grid-template-columns: 1fr; }
+  .roadmap { flex-direction: column; align-items: center; }
+  .roadmap-arrow { transform: rotate(90deg); }
+}
+
+/* ===== Scroll Top ===== */
+.scroll-top { position: fixed; bottom: 28px; right: 28px; width: 44px; height: 44px; background: var(--text); color: var(--bg); border: none; border-radius: 50%; font-size: 1rem; cursor: pointer; box-shadow: var(--shadow-lg); opacity: 0; transition: opacity .3s, transform .2s; z-index: 200; }
+.scroll-top.visible { opacity: 1; }
+.scroll-top:hover { background: var(--primary); color: #fff; transform: translateY(-2px); }
+.scroll-top:active { transform: translateY(0) scale(.95); }
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header class="header">
+  <h1>⚡ vLLM 交互式学习中心</h1>
+  <p class="subtitle">面向 FDE（Forward Deployment Engineer）的大模型推理引擎深度掌握</p>
+  <p class="who-for">🎯 适合：了解大模型基本概念，有代码开发和基础运维能力，想深入理解 vLLM 的工程师</p>
+  <div class="badge-row">
+    <span class="badge badge-begin">📘 从入门到排障</span>
+    <span class="badge badge-vllm">🖥️ vLLM v1</span>
+    <span class="badge badge-fde">🔧 FDE 实战导向</span>
+  </div>
+</header>
+
+<!-- ===== PROGRESS ===== -->
+<div class="progress-wrap">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  <div class="progress-text" id="progressText">已探索 0 / 10 个模块</div>
+</div>
+
+<!-- ===== TABS ===== -->
+<nav class="tab-nav container" id="tabNav">
+  <button class="tab-btn active" data-tab="roadmap"><span class="t-icon">🎓</span>学习路线</button>
+  <button class="tab-btn" data-tab="overview"><span class="t-icon">🗺️</span>全景概览</button>
+  <button class="tab-btn" data-tab="architecture"><span class="t-icon">🏗️</span>核心架构</button>
+  <button class="tab-btn" data-tab="pagedattention"><span class="t-icon">📄</span>PagedAttention</button>
+  <button class="tab-btn" data-tab="batching"><span class="t-icon">⚙️</span>调度与批处理</button>
+  <button class="tab-btn" data-tab="distributed"><span class="t-icon">🌐</span>分布式推理</button>
+  <button class="tab-btn" data-tab="deployment"><span class="t-icon">🚀</span>部署实战</button>
+  <button class="tab-btn" data-tab="tuning"><span class="t-icon">🎛️</span>性能调优</button>
+  <button class="tab-btn" data-tab="cheatsheet"><span class="t-icon">📋</span>FDE 速查</button>
+  <button class="tab-btn" data-tab="quiz"><span class="t-icon">🧪</span>自测挑战</button>
+</nav>
+
+<!-- ================================================================ -->
+<!-- SECTION 1: 学习路线 (ROADMAP) -->
+<!-- ================================================================ -->
+<section class="section active container" id="sec-roadmap">
+  <h2 class="section-title">🎓 学习路线 & 前置知识</h2>
+  <p class="section-desc">在深入 vLLM 之前，确认你了解必要的背景知识，并清楚推荐的学习顺序。</p>
+  <div class="objectives-box">
+    <div class="obj-label">🎯 本模块学习目标</div>
+    <ul>
+      <li>理解<strong>训练和推理</strong>的本质区别，知道为什么推理需要专门的引擎</li>
+      <li>能用大白话解释<strong>自回归生成</strong>和<strong>KV Cache</strong>为什么必须存在</li>
+      <li>能区分 <strong>Prefill 和 Decode</strong> 两个阶段及其资源需求差异</li>
+      <li>清楚整个课程的<strong>推荐学习路径</strong>和每个模块的定位</li>
+    </ul>
+  </div>
+
+  <!-- Learning path -->
+  <div class="card">
+    <h3><span class="emoji">🗺️</span>推荐学习路径（点击可跳转）</h3>
+    <div class="roadmap" id="roadmapEl">
+      <div class="roadmap-step" data-goto="roadmap"><span class="rs-num">1</span>前置知识</div>
+      <span class="roadmap-arrow">→</span>
+      <div class="roadmap-step" data-goto="overview"><span class="rs-num">2</span>全景概览</div>
+      <span class="roadmap-arrow">→</span>
+      <div class="roadmap-step" data-goto="architecture"><span class="rs-num">3</span>核心架构</div>
+      <span class="roadmap-arrow">→</span>
+      <div class="roadmap-step" data-goto="pagedattention"><span class="rs-num">4</span>PagedAttention</div>
+      <span class="roadmap-arrow">→</span>
+      <div class="roadmap-step" data-goto="batching"><span class="rs-num">5</span>调度批处理</div>
+      <span class="roadmap-arrow">→</span>
+      <div class="roadmap-step" data-goto="distributed"><span class="rs-num">6</span>分布式推理</div>
+      <span class="roadmap-arrow">→</span>
+      <div class="roadmap-step" data-goto="deployment"><span class="rs-num">7</span>部署实战</div>
+      <span class="roadmap-arrow">→</span>
+      <div class="roadmap-step" data-goto="tuning"><span class="rs-num">8</span>性能调优</div>
+    </div>
+    <p style="font-size:.82rem;color:var(--text-secondary);margin-top:8px;">
+      💡 <strong>建议按顺序学习</strong>：每个模块都建立在前面模块的基础上。如果你已经了解 Transformer 推理基础，可以直接从"全景概览"开始。
+    </p>
+  </div>
+
+  <!-- Prerequisites -->
+  <div class="card">
+    <h3><span class="emoji">📖</span>前置知识速览 — 大模型推理是怎样工作的？</h3>
+    <p style="font-size:.88rem;color:var(--text-secondary);margin-bottom:14px;">
+      如果你对以下概念已经很熟悉，可以跳过。如果不确定，花 5 分钟快速过一遍——这些是理解 vLLM 为什么这样设计的<strong>必要基础</strong>。
+    </p>
+
+    <div class="collapsible">
+      <button class="collapse-trigger" onclick="toggleCollapse(this)">
+        ① 训练 vs 推理：根本区别是什么？ <span class="arrow">▼</span>
+      </button>
+      <div class="collapse-content">
+        <table class="comparison-table">
+          <thead><tr><th>维度</th><th>训练 (Training)</th><th>推理 (Inference)</th></tr></thead>
+          <tbody>
+            <tr><td><strong>目标</strong></td><td>学习参数（更新权重）</td><td>使用参数（生成答案）</td></tr>
+            <tr><td><strong>计算方式</strong></td><td>前向 + <strong>反向传播</strong>（需要梯度）</td><td>仅<strong>前向传播</strong>（不需要梯度）</td></tr>
+            <tr><td><strong>显存大头</strong></td><td>优化器状态 + 梯度 + 激活值</td><td><strong>模型权重 + KV Cache</strong></td></tr>
+            <tr><td><strong>典型硬件</strong></td><td>数千张 GPU 集群</td><td>1~8 张 GPU（单机或小集群）</td></tr>
+            <tr><td><strong>延迟要求</strong></td><td>不敏感（小时/天级别）</td><td><strong>极敏感</strong>（毫秒/秒级别）</td></tr>
+            <tr><td><strong>输入</strong></td><td>完整数据集</td><td>单个 prompt</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:.82rem;color:var(--text-secondary);">
+          🔑 <strong>关键结论：</strong> vLLM 是一个<strong>推理</strong>引擎。它不训练模型，只负责高效地"使用"已经训练好的模型。推理的核心挑战是<strong>在有限显存下最大化吞吐、最小化延迟</strong>。
+        </p>
+      </div>
+    </div>
+
+    <div class="collapsible">
+      <button class="collapse-trigger" onclick="toggleCollapse(this)">
+        ② 自回归生成：LLM 怎样一个 token 一个 token 地"说话"？ <span class="arrow">▼</span>
+      </button>
+      <div class="collapse-content">
+        <p style="font-size:.85rem;">LLM 生成文本是<strong>一步一步</strong>的，每次只生成一个 token（一个词或子词），然后把新 token 追加到输入后面，再生成下一个：</p>
+        <div class="arch-diagram" style="font-size:.78rem;">
+          <div class="arch-row" style="justify-content:center;">
+            <span style="color:var(--text-secondary);">输入: "今天天气"</span>
+            <span class="arch-arrow">→</span>
+            <span class="step-box output">模型</span>
+            <span class="arch-arrow">→</span>
+            <span class="step-box output">"真"</span>
+          </div>
+          <div class="arch-row" style="justify-content:center;">
+            <span style="color:var(--text-secondary);">输入: "今天天气真"</span>
+            <span class="arch-arrow">→</span>
+            <span class="step-box output">模型</span>
+            <span class="arch-arrow">→</span>
+            <span class="step-box output">"好"</span>
+          </div>
+          <div class="arch-row" style="justify-content:center;">
+            <span style="color:var(--text-secondary);">输入: "今天天气真好"</span>
+            <span class="arch-arrow">→</span>
+            <span class="step-box output">模型</span>
+            <span class="arch-arrow">→</span>
+            <span class="step-box output">"！"</span>
+          </div>
+        </div>
+        <p style="font-size:.82rem;color:var(--text-secondary);">
+          🔑 注意：每次生成新 token 时，模型要重新"看"一遍<strong>所有之前的 tokens</strong>。如果每次都从头计算 Attention，计算量会以 O(n²) 增长。这就是 KV Cache 要解决的问题。
+        </p>
+      </div>
+    </div>
+
+    <div class="collapsible">
+      <button class="collapse-trigger" onclick="toggleCollapse(this)">
+        ③ KV Cache 为什么存在？（用简单例子讲清楚） <span class="arrow">▼</span>
+      </button>
+      <div class="collapse-content">
+        <p style="font-size:.85rem;"><strong>没有 KV Cache 的世界：</strong></p>
+        <div class="arch-diagram" style="font-size:.78rem;">
+          生成第 1 个 token：计算 Attention("今天","天气","真","好") → 生成 "！"<br>
+          生成第 2 个 token：计算 Attention("今天","天气","真","好","！") → <span style="color:var(--danger);">重新算了前 4 个！</span><br>
+          生成第 500 个 token：计算 Attention(前面 504 个 tokens) → <span style="color:var(--danger);">每次都重算，O(n²) 爆炸</span>
+        </div>
+        <p style="font-size:.85rem;margin-top:10px;"><strong>有 KV Cache 的世界：</strong></p>
+        <div class="arch-diagram" style="font-size:.78rem;">
+          生成第 1 个 token：计算 Attention(全部) → 把 K,V 存起来 → 生成 "！"<br>
+          生成第 2 个 token：只需要算新 token "！" 的 Attention →<strong>复用之前存好的 K,V</strong> → O(n) 而非 O(n²)<br>
+          生成第 500 个 token：只需算 1 个新 token → <strong>计算量恒定！</strong>
+        </div>
+        <p style="font-size:.82rem;color:var(--text-secondary);margin-top:8px;">
+          🔑 KV Cache 就是<strong>把之前算过的 Attention 中间结果（Key 和 Value）缓存起来</strong>，避免重复计算。代价是<strong>需要大量显存来存储</strong>——这就是 PagedAttention 要解决的显存管理问题。
+        </p>
+      </div>
+    </div>
+
+    <div class="collapsible">
+      <button class="collapse-trigger" onclick="toggleCollapse(this)">
+        ④ Prefill vs Decode：推理的两个阶段（理解 TTFT 的关键） <span class="arrow">▼</span>
+      </button>
+      <div class="collapse-content">
+        <table class="comparison-table">
+          <thead><tr><th>维度</th><th>Prefill（预填充）</th><th>Decode（解码）</th></tr></thead>
+          <tbody>
+            <tr><td><strong>做什么</strong></td><td>一次处理<strong>整个 prompt</strong>的所有 token</td><td>逐 token 生成输出</td></tr>
+            <tr><td><strong>计算特征</strong></td><td><strong>计算密集型</strong>（大量矩阵乘法）</td><td><strong>内存密集型</strong>（大量读取 KV Cache）</td></tr>
+            <tr><td><strong>GPU 利用率</strong></td><td>高（矩阵满载）</td><td>低（大部分时间在等显存读取）</td></tr>
+            <tr><td><strong>每次处理的 token 数</strong></td><td>N 个（prompt 的全部 token）</td><td>1 个（每次只生成 1 个）</td></tr>
+            <tr><td><strong>影响指标</strong></td><td><strong>TTFT</strong>（首 token 延迟）</td><td><strong>TPOT</strong>（每 token 生成时间）</td></tr>
+          </tbody>
+        </table>
+        <div class="info-callout">
+          <div class="clabel">💡 理解这个很重要</div>
+          <strong>Prefill 和 Decode 的资源需求是相反的：</strong>Prefill 需要大量计算但不需要太多显存带宽，Decode 几乎不计算但严重依赖显存带宽。这就是为什么会有 <strong>PD 分离架构</strong>（把 Prefill 和 Decode 放到不同的 GPU 节点上）。
+        </div>
+      </div>
+    </div>
+
+    <div class="collapsible">
+      <button class="collapse-trigger" onclick="toggleCollapse(this)">
+        ⑤ 显存层级：为什么 GPU 显存这么贵？ <span class="arrow">▼</span>
+      </button>
+      <div class="collapse-content">
+        <p style="font-size:.85rem;">GPU 显存（HBM，如 H100 的 80GB HBM3）的容量<strong>远小于</strong> CPU 内存（通常 512GB-2TB），但带宽极高（H100: 3.35TB/s）。推理的瓶颈往往是<strong>显存容量</strong>而非算力。</p>
+        <table class="comparison-table">
+          <thead><tr><th>存储层级</th><th>典型容量</th><th>带宽</th><th>存什么</th></tr></thead>
+          <tbody>
+            <tr><td>GPU HBM（显存）</td><td>80GB (H100)</td><td>~3.35 TB/s</td><td><strong>模型权重 + KV Cache</strong></td></tr>
+            <tr><td>CPU DRAM（内存）</td><td>512GB-2TB</td><td>~100 GB/s</td><td>操作系统 + 缓冲数据</td></tr>
+            <tr><td>NVMe SSD</td><td>2TB-8TB</td><td>~7 GB/s</td><td>模型文件（加载前）</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:.82rem;color:var(--text-secondary);margin-top:6px;">
+          🔑 一个 70B 参数的模型（FP16）本身就占 ~140GB 显存，两张 H100 才放得下。<strong>KV Cache 还要额外占用</strong>——这就是 vLLM 试图高效管理的珍贵资源。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Checklist -->
+  <div class="card">
+    <h3><span class="emoji">✅</span>学习检查清单</h3>
+    <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:10px;">点击勾选你已经掌握的内容，追踪学习进度（状态保存在浏览器中）：</p>
+    <ul class="checklist" id="checklistEl">
+      <li data-key="train-vs-infer" onclick="toggleCheck(this)"><span class="cb"></span>理解训练和推理的本质区别</li>
+      <li data-key="autoregressive" onclick="toggleCheck(this)"><span class="cb"></span>理解自回归生成的 token-by-token 过程</li>
+      <li data-key="kvcache-why" onclick="toggleCheck(this)"><span class="cb"></span>能解释 KV Cache 为什么必须存在</li>
+      <li data-key="prefill-decode" onclick="toggleCheck(this)"><span class="cb"></span>能区分 Prefill 和 Decode 两个阶段</li>
+      <li data-key="vllm-position" onclick="toggleCheck(this)"><span class="cb"></span>知道 vLLM 在推理生态中的定位</li>
+      <li data-key="paged-attention" onclick="toggleCheck(this)"><span class="cb"></span>能用自己的话解释 PagedAttention</li>
+      <li data-key="continuous-batching" onclick="toggleCheck(this)"><span class="cb"></span>理解 Continuous Batching 为什么快</li>
+      <li data-key="distributed" onclick="toggleCheck(this)"><span class="cb"></span>知道 TP/PP/DP 的区别和选择策略</li>
+      <li data-key="ttft-debug" onclick="toggleCheck(this)"><span class="cb"></span>能用决策树排查 TTFT 延迟问题</li>
+      <li data-key="deploy" onclick="toggleCheck(this)"><span class="cb"></span>能独立完成单机 vLLM 部署</li>
+    </ul>
+  </div>
+
+  <!-- Takeaways -->
+  <div class="takeaways-box">
+    <div class="tk-label">📝 要点回顾</div>
+    <ul>
+      <li><strong>训练</strong>更新参数，<strong>推理</strong>使用参数——vLLM 只管推理</li>
+      <li><strong>KV Cache</strong> 是"备忘录"：把算过的 Attention 结果缓存起来，避免每次 O(n²) 重算</li>
+      <li><strong>Prefill</strong> = 一口气处理 prompt（计算密集），<strong>Decode</strong> = 一个字一个字生成（内存密集）</li>
+      <li>推理的核心挑战：<strong>在有限显存下最大化吞吐、最小化延迟</strong></li>
+    </ul>
+  </div>
+
+  <!-- Section Nav -->
+  <div class="section-nav">
+    <span></span>
+    <button class="nav-btn" onclick="switchTab('overview')">下一节：全景概览 →</button>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 2: 全景概览 (OVERVIEW) -->
+<!-- ================================================================ -->
+<section class="section container" id="sec-overview">
+  <h2 class="section-title">🗺️ vLLM 全景概览</h2>
+  <p class="section-desc">vLLM 是什么？它解决了什么问题？为什么 FDE 必须掌握它？</p>
+  <div class="objectives-box">
+    <div class="obj-label">🎯 本模块学习目标</div>
+    <ul>
+      <li>理解 LLM 推理面临的核心挑战（显存碎片、低吞吐、高延迟）</li>
+      <li>记住 vLLM 的<strong>三大核心创新</strong>：PagedAttention、Continuous Batching、Prefix Caching</li>
+      <li>知道 vLLM 在推理引擎生态中的位置以及与 SGLang/TGI/TRT-LLM 的区别</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="emoji">🤔</span>LLM 推理有多难？</h3>
+    <p>假设你要上线一个 Llama-3-70B 的聊天服务，支持 100 人同时使用。直观挑战：</p>
+    <ul style="margin:8px 0 8px 20px;line-height:2;">
+      <li>模型本身占 <strong>~140GB 显存</strong>（FP16），两张 H100 才放得下</li>
+      <li>每个用户的对话上下文需要额外的 <strong>KV Cache 显存</strong>（每人最多几 GB）</li>
+      <li>用户希望 <strong>毫秒级</strong> 出第一个字（TTFT），<strong>流畅地</strong> 看到后续内容</li>
+      <li>100 人同时聊天，显存至少要管好这 100 份 KV Cache</li>
+    </ul>
+    <p style="margin-top:8px;">传统的做法（用 HuggingFace Transformers 直接跑）吞吐量极低，显存浪费严重——<strong>这就是 vLLM 要解决的问题</strong>。</p>
+  </div>
+
+  <div class="card">
+    <h3><span class="emoji">🎯</span>vLLM 一句话定位 + 三大核心创新</h3>
+    <p>vLLM 是一个<strong>高性能 LLM 推理与服务引擎</strong>，由 UC Berkeley 诞生，2000+ 贡献者。使命：<strong>Easy, Fast, Cheap</strong>。</p>
+    <table class="comparison-table" style="margin-top:12px;">
+      <thead><tr><th>创新</th><th>解决的痛点</th><th>技术手段</th><th>效果</th></tr></thead>
+      <tbody>
+        <tr><td><strong>PagedAttention</strong></td><td>KV Cache 显存碎片化（利用率 20-40%）</td><td>借鉴 OS 虚拟内存分页</td><td>利用率 → <strong>90%+</strong></td></tr>
+        <tr><td><strong>Continuous Batching</strong></td><td>请求必须同时开始/结束</td><td>Iteration-level 调度</td><td>吞吐 ↑ <strong>10-20x</strong></td></tr>
+        <tr><td><strong>Prefix Caching</strong></td><td>共享前缀重复计算</td><td>自动识别公共前缀</td><td>TTFT 大幅降低</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3><span class="emoji">📊</span>vLLM 在推理生态中的位置</h3>
+    <div class="arch-diagram">
+      <div style="text-align:center;color:var(--text-muted);">📥 用户请求 →</div>
+      <div class="arch-row" style="justify-content:center;">
+        <div class="arch-box api">OpenAI 兼容 API</div><span class="arch-arrow">→</span>
+        <div class="arch-box engine">推理引擎<br><small>vLLM / SGLang / TGI / TRT-LLM</small></div><span class="arch-arrow">→</span>
+        <div class="arch-box model">大模型<br><small>Llama / Qwen / DeepSeek ...</small></div>
+      </div>
+      <div style="text-align:center;color:var(--text-muted);margin-top:6px;">📤 流式输出 → 用户</div>
+    </div>
+    <p style="margin-top:10px;font-size:.85rem;color:var(--text-secondary);">
+      相比其他引擎：TGI（生态好但性能一般）、TRT-LLM（性能极致但部署复杂）、SGLang（结构化生成强）。vLLM 胜在<strong>平衡性最好</strong>。
+    </p>
+    <div class="fde-callout">
+      <div class="clabel">🔑 FDE 视角</div>
+      <strong>为什么 FDE 必须懂 vLLM？</strong> 你的核心职责是让模型高效跑在生产环境。vLLM 是最主流的推理引擎，理解它的内部机制 = 理解推理性能瓶颈。面试高频：PagedAttention 原理、Continuous Batching、分布式推理配置。
+    </div>
+  </div>
+
+  <div class="takeaways-box">
+    <div class="tk-label">📝 要点回顾</div>
+    <ul>
+      <li>LLM 推理三大难题：<strong>显存碎片</strong>、<strong>请求排队</strong>、<strong>GPU 利用率低</strong></li>
+      <li>vLLM = PagedAttention 解决显存 + Continuous Batching 解决吞吐 + Prefix Caching 解决延迟</li>
+      <li>vLLM 在引擎层——对上是 OpenAI 兼容 API，对下是各种大模型</li>
+    </ul>
+  </div>
+
+  <div class="section-nav">
+    <button class="nav-btn" onclick="switchTab('roadmap')">← 上一节：学习路线</button>
+    <button class="nav-btn" onclick="switchTab('architecture')">下一节：核心架构 →</button>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 3: 核心架构 (ARCHITECTURE) -->
+<!-- ================================================================ -->
+<section class="section container" id="sec-architecture">
+  <h2 class="section-title">🏗️ 核心架构</h2>
+  <p class="section-desc">理解 vLLM V1 的多进程架构：API Server → Engine Core → GPU Workers。<strong>点击色块看详情</strong>。往下滚动看组件之间的"群聊"对话。</p>
+  <div class="objectives-box">
+    <div class="obj-label">🎯 本模块学习目标</div>
+    <ul>
+      <li>画出 vLLM V1 的<strong>四层进程模型</strong>并解释每层的职责</li>
+      <li>理解 <strong>Engine Core busy loop</strong> 的 5 个步骤</li>
+      <li>掌握<strong>模型加载的 6 个阶段</strong>和每阶段的常见故障</li>
+      <li>能用 <strong>TTFT 决策树</strong> 排查首 token 延迟问题</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="emoji">🏛️</span>V1 架构全景图（四层进程模型）</h3>
+    <div class="arch-diagram">
+      <div style="text-align:center;font-weight:700;color:var(--text-secondary);">HTTP 请求</div>
+      <div class="arch-row" style="justify-content:center;">
+        <div class="arch-box api" id="archAPI">🔌 API Server<div class="arch-label">Tokenization + 多模态加载</div></div>
+      </div>
+      <div style="text-align:center;color:var(--text-muted);">↓ ZMQ (many-to-many)</div>
+      <div class="arch-row" style="justify-content:center;">
+        <div class="arch-box engine" id="archEngine">🧠 Engine Core<div class="arch-label">Scheduler + KV Cache 管理</div></div>
+        <span class="arch-arrow">⇄</span>
+        <div class="arch-box kv" id="archDP">🔀 DP Coordinator<div class="arch-label">负载均衡 (DP>1 时)</div></div>
+      </div>
+      <div style="text-align:center;color:var(--text-muted);">↓ 调度分发</div>
+      <div class="arch-row" style="justify-content:center;flex-wrap:wrap;">
+        <div class="arch-box worker" id="archWorker">⚙️ GPU Worker 0</div>
+        <div class="arch-box worker">⚙️ GPU Worker 1</div>
+        <div class="arch-box worker">⚙️ GPU Worker 2</div>
+        <div class="arch-box worker">⚙️ GPU Worker N</div>
+      </div>
+      <div style="text-align:center;color:var(--text-muted);">↓</div>
+      <div class="arch-row" style="justify-content:center;">
+        <div class="arch-box model">🧩 Model Runner → torch.nn.Module<div class="arch-label">Weight 加载 + Forward Pass</div></div>
+      </div>
+    </div>
+    <div id="archDetail" style="margin-top:14px;padding:14px;background:var(--surface-alt);border-radius:var(--radius);display:none;"></div>
+  </div>
+
+  <div class="card">
+    <h3><span class="emoji">📐</span>进程数量公式</h3>
+    <p style="font-size:1.05rem;text-align:center;padding:10px;background:var(--surface-alt);border-radius:var(--radius-sm);font-family:monospace;">
+      总进程数 = <strong>A</strong>(API Server) + <strong>DP</strong>(Engine Core) + <strong>N</strong>(GPU Workers) + <strong>1</strong>(if DP>1)<br>
+      <span style="font-size:.82rem;">其中 N = DP × PP × TP。每个 GPU Worker 独占一张 GPU。</span>
+    </p>
+    <div class="fde-callout">
+      <div class="clabel">🔑 FDE 视角</div>
+      <strong>排查问题时先数进程！</strong> 进程数对不上 → 检查 <code>CUDA_VISIBLE_DEVICES</code>、Ray 集群状态、TP/PP 配置。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><span class="emoji">🔀</span>Engine Core 内部调度循环</h3>
+    <pre style="background:#1c1917;color:#e7e5e4;padding:16px;border-radius:var(--radius);font-size:.78rem;overflow-x:auto;">
+<span style="color:#94a3b8;"># Engine Core 的 busy loop（核心调度逻辑）</span>
+<span style="color:#c084fc;">while</span> <span style="color:#fbbf24;">True</span>:
+    new_requests = receive_from_api_server()        <span style="color:#94a3b8;"># 1. 接收新请求</span>
+    scheduled = scheduler.schedule(                  <span style="color:#94a3b8;"># 2. 调度决策</span>
+        waiting_queue + running_queue,
+        available_kv_blocks                          <span style="color:#94a3b8;"># KV Cache 剩余容量</span>
+    )
+    <span style="color:#c084fc;">for</span> req <span style="color:#c084fc;">in</span> scheduled:
+        kv_cache_manager.allocate(req)               <span style="color:#94a3b8;"># 3. 分配 KV blocks</span>
+    outputs = dispatch_to_workers(scheduled)         <span style="color:#94a3b8;"># 4. 分发 GPU Workers</span>
+    <span style="color:#c084fc;">for</span> output <span style="color:#c084fc;">in</span> outputs:                           <span style="color:#94a3b8;"># 5. 处理输出</span>
+        <span style="color:#c084fc;">if</span> output.finished:
+            kv_cache_manager.free(output.request)    <span style="color:#94a3b8;"># 释放 KV blocks</span>
+        send_to_api_server(output)</pre>
+  </div>
+
+  <!-- Model Loading Flow -->
+  <div class="card">
+    <h3><span class="emoji">📥</span>模型加载底层流程（从 vllm serve 到 Ready）</h3>
+    <div class="flow-phase">
+      <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+        <span class="phase-num">0</span><span class="phase-title">进程启动 & 配置解析</span><span class="phase-time">~2-5s</span><span class="arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <p style="font-size:.8rem;"><strong>动作：</strong>解析命令行 → 构建 <code>VllmConfig</code> → 初始化 Ray（如需）→ NCCL 检测 GPU 拓扑</p>
+        <div class="fde-callout" style="font-size:.78rem;"><strong>⚠️ 故障：</strong>CUDA_VISIBLE_DEVICES 错误、Ray 未初始化、NCCL 拓扑检测超时</div>
+      </div>
+    </div>
+    <div class="flow-phase">
+      <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+        <span class="phase-num">1</span><span class="phase-title">模型权重加载</span><span class="phase-time">~30s-5min</span><span class="arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <p style="font-size:.8rem;"><strong>路径：</strong>HF Hub / 本地磁盘 → CPU 内存 → GPU 显存（按 TP shard，<strong>不是</strong>先完整加载再切）</p>
+        <div class="fde-callout" style="font-size:.78rem;"><strong>⚠️ 故障：</strong>磁盘空间不足、单卡放不下 → 增大 TP 或启用 PP</div>
+      </div>
+    </div>
+    <div class="flow-phase">
+      <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+        <span class="phase-num">2</span><span class="phase-title">模型初始化（nn.Module 构建）</span><span class="phase-time">~5-15s</span><span class="arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <p style="font-size:.8rem;">VllmConfig → ModelRunner.__init__() → 逐层构建 nn.Module → 注册 fused kernels</p>
+        <div class="fde-callout" style="font-size:.78rem;"><strong>⚠️ 故障：</strong>flash-attn 未安装、模型架构不支持</div>
+      </div>
+    </div>
+    <div class="flow-phase">
+      <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+        <span class="phase-num">3</span><span class="phase-title">KV Cache 显存预分配</span><span class="phase-time">~1-3s</span><span class="arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <p style="font-size:.8rem;"><strong>公式：</strong><code>num_blocks = (gpu_mem × utilization - weight_mem) / (block_size × kv_per_token)</code></p>
+        <div class="fde-callout" style="font-size:.78rem;"><strong>⚠️ OOM 最常发生在此阶段！</strong>→ 降低 utilization 或 max-model-len</div>
+      </div>
+    </div>
+    <div class="flow-phase">
+      <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+        <span class="phase-num">4</span><span class="phase-title">CUDA Graph 捕获</span><span class="phase-time">~10-60s</span><span class="arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <p style="font-size:.8rem;">预录制不同 batch size 的 CUDA Graph。失败时用 <code>--enforce-eager</code> 禁用。</p>
+      </div>
+    </div>
+    <div class="flow-phase open">
+      <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+        <span class="phase-num">5</span><span class="phase-title">✅ Ready to Serve</span><span class="phase-time"></span><span class="arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <p style="font-size:.8rem;">日志 <code>Uvicorn running on http://0.0.0.0:8000</code> → 可以接收请求。</p>
+        <div class="fde-callout" style="font-size:.78rem;"><strong>排障要点：</strong>卡在哪个阶段就排查哪个阶段</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TTFT Flow -->
+  <div class="card">
+    <h3><span class="emoji">⏱️</span>请求执行全链路 & TTFT 时间分解</h3>
+    <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:12px;">从 HTTP 请求到第一个 token，每一步都可独立分析——<strong>排查 TTFT 延迟的核心框架</strong>。</p>
+    <div style="overflow-x:auto;">
+      <table class="comparison-table" style="min-width:850px;">
+        <thead><tr><th>#</th><th>阶段</th><th>组件</th><th>耗时来源</th><th>典型耗时</th><th>TTFT占比</th><th>排查指标</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>HTTP 接收</td><td>API Server</td><td>网络 + 队列</td><td>1-10ms</td><td>~1%</td><td><code>vllm_http_request_duration</code></td></tr>
+          <tr><td>2</td><td>Tokenization</td><td>API Server</td><td>文本→token IDs</td><td>1-50ms</td><td>~2%</td><td>prompt 长度</td></tr>
+          <tr><td>3</td><td>ZMQ 传输</td><td>API→Engine</td><td>跨进程通信</td><td>&lt;1ms</td><td>~0%</td><td>通常不是瓶颈</td></tr>
+          <tr style="background:#fffbeb;"><td>4</td><td><strong>🔴 调度等待</strong></td><td>Engine Core</td><td><strong>等 KV Cache 空位</strong></td><td><strong>0-∞</strong></td><td style="color:var(--danger);"><strong>不确定</strong></td><td><code>vllm_time_in_queue</code></td></tr>
+          <tr style="background:#fef2f2;"><td>5</td><td><strong>🔴 Prefill 计算</strong></td><td>GPU Workers</td><td><strong>并行处理全部 prompt</strong></td><td><strong>50ms-10s</strong></td><td style="color:var(--danger);"><strong>70-90%</strong></td><td><code>vllm_prefill_duration</code></td></tr>
+          <tr><td>6</td><td>KV Cache 写入</td><td>Engine Core</td><td>写入 blocks</td><td>&lt;1ms</td><td>~0%</td><td>—</td></tr>
+          <tr><td>7</td><td>首个 Decode</td><td>GPU Workers</td><td>生成第一个新 token</td><td>5-50ms</td><td>~5-10%</td><td><code>vllm_decode_duration</code></td></tr>
+          <tr><td>8</td><td>Detokenization</td><td>API Server</td><td>token→文本</td><td>1-5ms</td><td>~1%</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;">
+      <h4 style="font-size:.92rem;font-weight:700;margin-bottom:6px;">🔍 TTFT 排查决策树</h4>
+      <div class="arch-diagram" style="font-size:.76rem;line-height:2.1;">
+        <strong>TTFT 偏高？</strong><br>
+        ├─ <strong>排队时间长？</strong> → <code>num_requests_waiting</code> 高<br>
+        │   → 增大 <code>--max-num-seqs</code> 或降低 <code>--max-model-len</code><br>
+        ├─ <strong>Prefill 时间长？</strong> → check <code>vllm_prefill_duration</code><br>
+        │   ├─ Prompt > 4K tokens → 开启 <code>--enable-chunked-prefill</code><br>
+        │   ├─ 公共前缀 → 开启 <code>--enable-prefix-caching</code><br>
+        │   └─ GPU 利用率低 → <code>nvidia-smi</code> 检查是否有进程抢占<br>
+        └─ <strong>Tokenization 慢？</strong> → 极少见，检查多模态编码
+      </div>
+    </div>
+    <div class="fde-callout" style="margin-top:10px;">
+      <div class="clabel">🔑 TTFT 三步法</div>
+      ① <strong>定位阶段</strong>（Prometheus 指标区分排队 vs 计算）→ ② <strong>看资源</strong>（nvidia-smi + vllm_num_blocks_available）→ ③ <strong>调参数</strong>
+    </div>
+  </div>
+
+  <!-- FlashAttention -->
+  <div class="card">
+    <h3><span class="emoji">⚡</span>FlashAttention -- 推理加速的"隐藏基石"</h3>
+    <p style="font-size:.83rem;color:var(--text-secondary);margin-bottom:12px;">
+      模型初始化阶段最容易报错的组件。它不改变模型结构，但<strong>没有它，Prefill 速度会慢 2-4 倍</strong>。
+    </p>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">核心问题：Attention 的中间矩阵太大</h4>
+    <div class="arch-diagram" style="font-size:.76rem;line-height:1.7;">
+<pre style="background:transparent;">
+标准 Attention:
+  Q x K^T → attention_scores [4096, 4096] ≈ <strong>32 MB</strong>  ← 必须写回显存再读出来
+  Softmax → attention_weights [4096, 4096] ≈ <strong>32 MB</strong>
+  x V → 输出
+
+FlashAttention:
+  Q,K,V 分块加载到 GPU <strong>片上 SRAM</strong>（比 HBM 快 10 倍）
+  → 在 SRAM 里算完局部 Attention → 直接累加 → <strong>中间矩阵从不写回显存</strong>
+  → 显存 IO 减少 ~30%，实际速度提升 <strong>2-4x</strong>
+</pre>
+    </div>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">跟 TP/PP/DP 的关系</h4>
+    <table class="comparison-table" style="font-size:.8rem;">
+      <thead><tr><th>关系</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><strong>直接关系</strong></td><td>几乎没有。FlashAttention 是 <strong>Attention Kernel 实现优化</strong>（怎么算），TP/PP/DP 是<strong>分布式策略</strong>（在哪算、谁算哪部分）</td></tr>
+        <tr><td><strong>在 TP 中</strong></td><td>每个 GPU 独立执行 FlashAttention（算各自分到的 head），不参与跨 GPU 的 AllReduce 通信</td></tr>
+        <tr><td><strong>间接收益</strong></td><td>FlashAttention 省下的临时显存（~2.5GB for 70B）让同样 TP 下能分配<strong>更多 KV Cache blocks</strong></td></tr>
+        <tr><td><strong>在 PP/DP 中</strong></td><td>无特殊关系--每个 GPU 各自受益于 FlashAttention 的加速</td></tr>
+      </tbody>
+    </table>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">为什么启动时容易报错</h4>
+    <p style="font-size:.83rem;color:var(--text-secondary);">
+      FlashAttention 包含<strong>编译好的 CUDA kernel</strong>，安装时需要在本地编译：
+    </p>
+    <table class="comparison-table" style="font-size:.8rem;">
+      <thead><tr><th>常见失败原因</th><th>排查</th></tr></thead>
+      <tbody>
+        <tr><td>CUDA toolkit 版本不匹配</td><td><code>nvcc --version</code> vs <code>nvidia-smi</code> 对比</td></tr>
+        <tr><td>GPU 架构不支持（老卡 SM < 80）</td><td>A100/H100 正常；V100 需旧版 flash-attn</td></tr>
+        <tr><td>nvcc 未安装或不在 PATH</td><td><code>which nvcc</code></td></tr>
+        <tr><td>编译超时/内存不足</td><td><code>MAX_JOBS=1 pip install flash-attn</code> 限制并行编译</td></tr>
+      </tbody>
+    </table>
+
+    <div class="fde-callout" style="margin-top:8px;">
+      <div class="clabel">⚠️ 如果没装</div>
+      vLLM 自动回退到 xformers 或 PyTorch native attention。能跑，但<strong>Prefill 慢 2-5 倍 + OOM 风险更高</strong>。生产环境<strong>必须安装</strong>。
+    </div>
+  </div>
+
+  <!-- GROUP CHAT ANIMATION -->
+  <div class="card">
+    <h3><span class="emoji">💬</span>如果组件会聊天 — 一个请求的完整旅程</h3>
+    <p style="font-size:.83rem;color:var(--text-secondary);margin-bottom:10px;">
+      想象 API Server、Engine Core 和 GPU Worker 在一个群聊里。当用户发送 "Hello!" 时，它们之间发生了什么？
+    </p>
+    <div class="chat-thread" id="chatThread">
+      <div class="chat-msg"><div class="chat-avatar api">🔌</div><div class="chat-bubble"><div class="chat-name api-name">API Server</div>收到 HTTP 请求！有人发了 <code>"Hello!"</code>，让我把它 tokenize 成 <code>[15496, 0]</code>，然后发给 Engine Core。</div></div>
+      <div class="chat-msg"><div class="chat-avatar engine">🧠</div><div class="chat-bubble"><div class="chat-name engine-name">Engine Core</div>收到 2 个 tokens。让我看看 KV Cache 里还有 <code>1200</code> 个空闲 blocks……够用！分配 blocks #42-50 给这个请求，加入本轮 batch。喂给 GPU Workers！</div></div>
+      <div class="chat-msg"><div class="chat-avatar worker">⚙️</div><div class="chat-bubble"><div class="chat-name worker-name">GPU Worker 0</div>收到来自 Engine 的 batch！Prefill 这 2 个 tokens……算完了，KV Cache 已写入。现在 Decode 生成下一个 token……是 <code>"Hi"</code>，概率 0.92。</div></div>
+      <div class="chat-msg"><div class="chat-avatar engine">🧠</div><div class="chat-bubble"><div class="chat-name engine-name">Engine Core</div>收到第一个 decode token！这个请求还没结束（没遇到 EOS），继续留在 running queue 里。输出 <code>"Hi"</code> 发给 API Server。</div></div>
+      <div class="chat-msg"><div class="chat-avatar api">🔌</div><div class="chat-bubble"><div class="chat-name api-name">API Server</div>收到第一个 token <code>"Hi"</code>！detokenize 后通过 SSE 流式返回给用户。用户看到了第一个字！转发中……</div></div>
+      <div class="chat-msg"><div class="chat-avatar worker">⚙️</div><div class="chat-bubble"><div class="chat-name worker-name">GPU Worker 0</div>又一个 decode step……这次生成了 <code>&lt;EOS&gt;</code>，请求结束了！通知 Engine Core 释放 KV blocks。</div></div>
+      <div class="chat-msg"><div class="chat-avatar engine">🧠</div><div class="chat-bubble"><div class="chat-name engine-name">Engine Core</div>收到 EOS！释放 blocks #42-50，从 running queue 中移除。如果有等待的请求，现在可以调度进来了。</div></div>
+    </div>
+    <div class="chat-replay"><button onclick="replayChat()">🔄 重播对话</button></div>
+  </div>
+
+  <!-- Takeaways -->
+  <div class="takeaways-box">
+    <div class="tk-label">📝 要点回顾</div>
+    <ul>
+      <li>vLLM V1 是<strong>多进程架构</strong>：API Server (HTTP+Tokenization) → Engine Core (调度+KV) → GPU Workers (计算)</li>
+      <li>Engine Core 是<strong>单进程 busy loop</strong>，调度和 KV Cache 管理在同一个进程中零延迟协同</li>
+      <li>模型加载最危险是<strong>阶段 3</strong>（KV Cache 预分配）——OOM 高发地</li>
+      <li><strong>TTFT 70-90%</strong> 花在 Prefill 上，排查从区分"排队"还是"计算"开始</li>
+    </ul>
+  </div>
+
+  <div class="section-nav">
+    <button class="nav-btn" onclick="switchTab('overview')">← 上一节：全景概览</button>
+    <button class="nav-btn" onclick="switchTab('pagedattention')">下一节：PagedAttention →</button>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 4: PagedAttention -->
+<!-- ================================================================ -->
+<section class="section container" id="sec-pagedattention">
+  <h2 class="section-title">📄 PagedAttention 深度解析</h2>
+  <p class="section-desc">vLLM 最核心的技术创新。借鉴操作系统虚拟内存的分页思想，解决 KV Cache 显存碎片问题。</p>
+  <div class="objectives-box">
+    <div class="obj-label">🎯 本模块学习目标</div>
+    <ul>
+      <li>计算任意模型的 <strong>KV Cache 显存占用</strong>，理解为什么 1024 并发需要 TB 级显存</li>
+      <li>用<strong>操作系统虚拟内存</strong>的类比解释 PagedAttention 的工作原理</li>
+      <li>理解 <strong>Block Table</strong> 如何实现逻辑→物理映射和跨序列共享</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="emoji">🧠</span>KV Cache 显存占用有多严重？</h3>
+    <p>70B 参数模型（Llama-3-70B），seq_len=4096：</p>
+    <ul style="margin:8px 0 8px 20px;line-height:2;">
+      <li>单个请求 KV Cache ≈ <strong>3.2 GB</strong></li>
+      <li>1024 并发 ≈ <strong>3.2 TB</strong> 😱</li>
+      <li>传统连续分配：利用率仅 <strong>20-40%</strong></li>
+    </ul>
+    <p style="font-size:.82rem;color:var(--text-secondary);">公式：M = 2 × layers × kv_heads × d_head × seq_len × 2(K+V) × bytes_per_element</p>
+  </div>
+
+  <div class="card">
+    <h3><span class="emoji">📖</span>OS 虚拟内存类比</h3>
+    <table class="comparison-table">
+      <thead><tr><th>OS 概念</th><th>PagedAttention</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>虚拟地址空间</td><td>逻辑连续的 token 序列</td><td>请求看到"连续"的 KV Cache</td></tr>
+        <tr><td>物理页帧</td><td>固定大小 KV blocks (16/32 tokens)</td><td>物理存储单元</td></tr>
+        <tr><td>页表</td><td>Block Table（逻辑→物理映射）</td><td>Attention 计算时查表定位</td></tr>
+        <tr><td>共享内存(IPC)</td><td>Beam search 共享前缀</td><td>多个序列共享同一 prefix 的 blocks</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3><span class="emoji">🎮</span>交互演示：传统分配 vs PagedAttention</h3>
+    <p style="font-size:.83rem;color:var(--text-secondary);margin-bottom:10px;">每个方块 = 一个 KV block（16 tokens）。点击按钮重新模拟。</p>
+    <div class="viz-container">
+      <div class="viz-panel">
+        <h4 style="margin-bottom:6px;">❌ 传统连续分配（碎片化）</h4>
+        <div class="viz-blocks" id="vizTraditional"></div>
+        <div class="viz-legend">
+          <span><span class="dot" style="background:#cbd5e1;"></span>空闲</span>
+          <span><span class="dot" style="background:#6366f1;"></span>已分配</span>
+          <span><span class="dot" style="background:#f59e0b;"></span>碎片</span>
+        </div>
+        <p style="font-size:.72rem;color:var(--text-muted);">利用率：<strong id="tradUtil">≈35%</strong></p>
+      </div>
+      <div class="viz-panel">
+        <h4 style="margin-bottom:6px;">✅ PagedAttention（无碎片）</h4>
+        <div class="viz-blocks" id="vizPaged"></div>
+        <div class="viz-legend">
+          <span><span class="dot" style="background:#cbd5e1;"></span>空闲</span>
+          <span><span class="dot" style="background:#6366f1;"></span>请求A</span>
+          <span><span class="dot" style="background:#10b981;"></span>请求B</span>
+        </div>
+        <p style="font-size:.72rem;color:var(--text-muted);">利用率：<strong id="pagedUtil">≈96%</strong></p>
+      </div>
+    </div>
+    <button onclick="resetViz()" style="margin-top:10px;padding:7px 18px;background:var(--primary);color:#fff;border:none;border-radius:20px;cursor:pointer;font-weight:600;">🔄 重新模拟</button>
+  </div>
+
+  <div class="fde-callout">
+    <div class="clabel">🔑 面试必考</div>
+    <strong>一句话回答模板：</strong>"PagedAttention 借鉴 OS 虚拟内存分页思想，将 KV Cache 切分为固定大小的 block，通过 block table 做逻辑到物理的映射，消除显存碎片，利用率从 20-40% 提升到 90%+。同时支持 beam search 等场景下多序列共享前缀。"
+  </div>
+
+  <div class="takeaways-box">
+    <div class="tk-label">📝 要点回顾</div>
+    <ul>
+      <li>PagedAttention = OS 分页思想 → KV Cache → 利用率 20%→<strong>90%+</strong></li>
+      <li><strong>Block Table</strong> 是核心数据结构：逻辑 token 位置→物理 block 编号</li>
+      <li>面试金句：借鉴操作系统虚拟内存分页，将 KV Cache 切分为固定 block，消除显存碎片</li>
+    </ul>
+  </div>
+
+  <div class="section-nav">
+    <button class="nav-btn" onclick="switchTab('architecture')">← 上一节：核心架构</button>
+    <button class="nav-btn" onclick="switchTab('batching')">下一节：调度与批处理 →</button>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 5: 调度与批处理 -->
+<!-- ================================================================ -->
+<section class="section container" id="sec-batching">
+  <h2 class="section-title">⚙️ 调度与连续批处理</h2>
+  <p class="section-desc">vLLM 吞吐量远超其他引擎的关键——Continuous Batching。</p>
+  <div class="objectives-box">
+    <div class="obj-label">🎯 本模块学习目标</div>
+    <ul>
+      <li>对比 <strong>Static Batching</strong> 和 <strong>Continuous Batching</strong> 的核心区别</li>
+      <li>理解 CB 的<strong>五个底层机制</strong>：超序列拼接、Position IDs、Block Diagonal Mask、Block Table、Iteration-level 调度</li>
+      <li>理解 <strong>Chunked Prefill</strong> 如何避免长 prompt 阻塞短请求</li>
+      <li>记住 <strong>TTFT / TPOT / ITL / Throughput / QPS</strong> 五大指标及其业务含义</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="emoji">🔄</span>Static Batching vs Continuous Batching</h3>
+    <table class="comparison-table">
+      <thead><tr><th>维度</th><th>Static Batching</th><th>Continuous Batching (vLLM)</th></tr></thead>
+      <tbody>
+        <tr><td>请求加入/离开</td><td>必须同时开始、同时结束</td><td>任意时刻可加入/离开</td></tr>
+        <tr><td>调度粒度</td><td>Request-level</td><td><strong>Iteration-level</strong></td></tr>
+        <tr><td>短请求等待</td><td>等长请求完成</td><td>完成即退出，新请求立即补入</td></tr>
+        <tr><td>GPU 利用率</td><td>低（气泡多）</td><td>高（持续满载）</td></tr>
+        <tr><td>吞吐提升</td><td>基准</td><td><strong>10-20x</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- CB 底层实现 -->
+  <div class="card">
+    <h3><span class="emoji">🔧</span>Continuous Batching 底层如何实现？</h3>
+    <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:14px;">
+      核心挑战：<strong>三个请求处于三个不同阶段</strong>（一个 Prefill、两个 Decode），如何让它们在一次 GPU forward pass 中同时计算？
+    </p>
+
+    <h4 style="font-size:.92rem;font-weight:700;margin:14px 0 8px;">机制一：超序列拼接</h4>
+    <p style="font-size:.85rem;">把所有请求的 token 拼成<strong>一个一维数组</strong>，GPU 一次 forward pass 全部处理：</p>
+    <div class="arch-diagram" style="font-size:.78rem;">
+      请求A (Decode, 历史 5 tokens): 需要算 <code>[A_5]</code><br>
+      请求B (Prefill, prompt 4 tokens): 需要算 <code>[B_0, B_1, B_2, B_3]</code><br>
+      请求C (Decode, 历史 3 tokens): 需要算 <code>[C_3]</code><br><br>
+      <strong>input_ids = [A_5, B_0, B_1, B_2, B_3, C_3]</strong><br>
+      <span style="color:var(--text-secondary);">不需要 GPU 知道"这是 3 个请求"——它只看到一个 [6, hidden_dim] 的输入</span>
+    </div>
+
+    <h4 style="font-size:.92rem;font-weight:700;margin:14px 0 8px;">机制二：Position IDs — 告诉模型真实位置</h4>
+    <p style="font-size:.85rem;">拼接后 token 在数组中的位置 ≠ 它在原始序列中的真实位置。需要通过 <strong>position_ids</strong> 告诉 RoPE 每个 token 的真实位置：</p>
+    <div class="arch-diagram" style="font-size:.78rem;">
+      input_ids 数组:     <code>[A_5, B_0, B_1, B_2, B_3, C_3]</code><br>
+      在 batch 中的索引:    0     1    2    3    4    5<br>
+      <strong>position_ids   = [5,    0,   1,   2,   3,   3]</strong><br>
+      <span style="color:var(--text-secondary);">A_5 是请求A 的第 5 个 token（前面有 5 个历史）；C_3 是请求C 的第 3 个</span>
+    </div>
+
+    <h4 style="font-size:.92rem;font-weight:700;margin:14px 0 8px;">机制三：Block Diagonal Attention Mask — 阻止跨请求"偷看"</h4>
+    <p style="font-size:.85rem;">最关键的机制：<strong>拼接在一起的 token 绝对不能互相看到。</strong>每次 forward pass 动态构造块对角 mask：</p>
+    <div class="arch-diagram" style="font-size:.74rem;">
+      <pre style="background:transparent;line-height:1.8;">
+Attention 矩阵 (谁可以看到谁):
+            A_5  B_0  B_1  B_2  B_3  C_3
+      A_5 [  1    0    0    0    0    0  ]  ← A_5 只看自己和历史(不在本次 input 中)
+      B_0 [  0    1    0    0    0    0  ]  ← B_0 是第一个 token，只看自己
+      B_1 [  0    1    1    0    0    0  ]  ← B_1 能看到 B_0 和自己
+      B_2 [  0    1    1    1    0    0  ]
+      B_3 [  0    1    1    1    1    0  ]
+      C_3 [  0    0    0    0    0    1  ]  ← C_3 只看自己(历史在 KV Cache 里)
+
+<span style="color:var(--success);">同请求的 token 可以互相看到 (块内连接)；跨请求的 Attention 被 block 为 0 ✅</span></pre>
+    </div>
+
+    <h4 style="font-size:.92rem;font-weight:700;margin:14px 0 8px;">机制四：Block Table — 历史 KV Cache 的非连续访问</h4>
+    <p style="font-size:.85rem;">不仅 input 是拼接的，<strong>历史 KV Cache 的访问</strong>也依赖 PagedAttention 的 block table：</p>
+    <div class="arch-diagram" style="font-size:.78rem;">
+      请求A 的 block_table: <code>[42, 137]</code> ← 2 个物理 block 存着 tokens 0~15 的 K,V<br>
+      请求B 的 block_table: <code>[7, 8]</code>    ← Prefill 刚写入的<br>
+      请求C 的 block_table: <code>[99]</code>      ← 1 个物理 block<br><br>
+      Attention Kernel 根据各自的 block_table 加载对应物理 block 的 K,V<br>
+      → 物理上不连续，但逻辑上每个请求看到的是"完整连续的 KV Cache"
+    </div>
+
+    <h4 style="font-size:.92rem;font-weight:700;margin:14px 0 8px;">机制五：一次完整 Step 的调度执行</h4>
+    <div class="arch-diagram" style="font-size:.76rem;line-height:1.8;">
+      <strong>Scheduler Step:</strong><br>
+      ① 检查 waiting queue → 请求B 进来 → 分配 KV blocks → waiting→running<br>
+      ② 检查 running queue → 请求A 继续、请求C 继续<br>
+      ③ 准备数据 → input_ids + position_ids + attn_mask + block_tables<br>
+      ④ <strong>一次 Forward Pass</strong> → 6 个 token 同时计算<br>
+      ⑤ 采样 → A 生成 "呀"、B 生成首 token "春"、C 生成 EOS → 完成<br>
+      ⑥ 后处理 → C 释放 blocks → A,B 继续在 running → 下轮迭代
+    </div>
+
+    <h4 style="font-size:.92rem;font-weight:700;margin:14px 0 8px;">为什么 Prefill 和 Decode 能混在一起？</h4>
+    <p style="font-size:.85rem;">在 Attention 层面，Prefill 的 token 和 Decode 的 token <strong>只是"长度不同"</strong>，都是普通的矩阵运算。请求B 的 4 个 token 互做 Self-Attention（正常 Prefill），请求A 的单 token 与历史 KV Cache 做 Attention（正常 Decode）。Block Diagonal Mask 确保它们互不干扰——混合 batch 的额外开销（构造 mask + 拼接 input）相比较 forward pass 的计算时间几乎可忽略。</p>
+
+    <h4 style="font-size:.92rem;font-weight:700;margin:14px 0 8px;">Chunked Prefill 如何融入</h4>
+    <p style="font-size:.85rem;">长 prompt（如 20000 tokens）不能一次性 Prefill。它被拆成多个 chunk，<strong>每批大小由 <code>max-num-batched-tokens</code> 控制</strong>，chunk 之间穿插普通 Decode：</p>
+    <div class="arch-diagram" style="font-size:.76rem;line-height:1.7;">
+      Step M:   Prefill chunk tokens[0:4095]     → 写 KV blocks → 请求回到 waiting 继续排队<br>
+      Step M+1: Decode batch (其他短请求)         → 穿插！<br>
+      Step M+2: Prefill chunk tokens[4096:8191]  → 追加 KV blocks → 继续排队<br>
+      Step M+3: Decode batch                     → 穿插！<br>
+      ...直到全部 prompt 处理完 → 进入 running queue → 开始 Decode<br>
+      <span style="color:var(--success);">✅ 长 prompt 不阻塞短请求 —— 这是 Chunked Prefill 的核心价值</span>
+    </div>
+
+    <div class="fde-callout" style="margin-top:12px;">
+      <div class="clabel">🔑 FDE 视角</div>
+      <strong>Continuous Batching = 五个机制协同：</strong>超序列拼接 + Position IDs + Block Diagonal Mask + Block Table + Iteration-level 调度。这五个机制让 Prefill(计算密集) 和 Decode(内存密集) 的 token 可以在一次 GPU forward pass 中<strong>同时处理</strong>——这是 10-20x 吞吐提升的根本原因，不是简单的"动态 batch"。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><span class="emoji">⏱️</span>Chunked Prefill — 进一步优化</h3>
+    <p>传统 Prefill 一次性处理整个 prompt，耗时较长，阻塞其他请求。Chunked Prefill 将 prompt 拆分为多个 chunk：</p>
+    <div class="arch-diagram">
+      <strong>传统：</strong> [===== 整个 Prompt =====] → 阻塞 → Decode<br>
+      <strong>Chunked：</strong> [Chunk1] → [Chunk2] → [Chunk3] → Decode<br>
+      <span style="color:var(--success);">✅ chunk 之间可穿插其他请求的 decode</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><span class="emoji">📊</span>FDE 必知的五大性能指标</h3>
+    <table class="comparison-table">
+      <thead><tr><th>指标</th><th>全称</th><th>含义</th><th>FDE 关注点</th></tr></thead>
+      <tbody>
+        <tr><td><strong>TTFT</strong></td><td>Time To First Token</td><td>首 token 延迟</td><td>用户感知响应速度，受 Prefill 影响</td></tr>
+        <tr><td><strong>TPOT</strong></td><td>Time Per Output Token</td><td>每 token 生成时间</td><td>Decode 阶段效率</td></tr>
+        <tr><td><strong>ITL</strong></td><td>Inter-Token Latency</td><td>token 间延迟</td><td>流式输出流畅度</td></tr>
+        <tr><td><strong>Throughput</strong></td><td>吞吐量</td><td>每秒 token 数</td><td>系统容量，直接关联成本</td></tr>
+        <tr><td><strong>QPS</strong></td><td>Queries Per Second</td><td>每秒请求数</td><td>业务并发能力</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="takeaways-box">
+    <div class="tk-label">📝 要点回顾</div>
+    <ul>
+      <li>Continuous Batching = <strong>Iteration-level</strong> 调度，请求随时加入/离开，吞吐 ↑10-20x</li>
+      <li>Chunked Prefill 将长 prompt 拆块处理，块间可穿插其他请求的 decode</li>
+      <li><strong>TTFT</strong>（用户感知速度）vs <strong>Throughput</strong>（系统容量）是一对需要权衡的指标</li>
+    </ul>
+  </div>
+
+  <!-- Quick Check -->
+  <div class="quick-check" id="qc-batching">
+    <div class="qc-q">🧪 快速自检：为什么 Static Batching 的 GPU 利用率低？</div>
+    <span class="qc-opt" onclick="checkQuick(this,'qc-batching',0)">A. 使用了大 batch size</span>
+    <span class="qc-opt" onclick="checkQuick(this,'qc-batching',1)">B. 短请求完成后 GPU 空闲等长请求（气泡）</span>
+    <span class="qc-opt" onclick="checkQuick(this,'qc-batching',2)">C. 显存太小</span>
+    <span class="qc-opt" onclick="checkQuick(this,'qc-batching',3)">D. 网络带宽不够</span>
+    <div class="qc-fb"></div>
+  </div>
+
+  <div class="section-nav">
+    <button class="nav-btn" onclick="switchTab('pagedattention')">← 上一节：PagedAttention</button>
+    <button class="nav-btn" onclick="switchTab('distributed')">下一节：分布式推理 →</button>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 6: 分布式推理 -->
+<!-- ================================================================ -->
+<section class="section container" id="sec-distributed">
+  <h2 class="section-title">🌐 分布式推理</h2>
+  <p class="section-desc">FDE 核心技能：理解 TP / PP / DP 三种并行策略及组合方式。</p>
+  <div class="objectives-box">
+    <div class="obj-label">🎯 本模块学习目标</div>
+    <ul>
+      <li>区分 <strong>TP（切权重）、PP（切层）、DP（复制模型）</strong>三种并行策略</li>
+      <li>按通信开销<strong>从低到高</strong>排序：DP < PP < TP</li>
+      <li>掌握选择策略的<strong>决策树</strong>：单卡→DP，单机→TP，跨机→TP+PP</li>
+      <li>理解 <strong>PD 分离</strong>如何让 Prefill 和 Decode 独立扩缩容</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="emoji">🔀</span>三种并行策略对比</h3>
+    <table class="comparison-table">
+      <thead><tr><th>策略</th><th>原理</th><th>通信量</th><th>适用场景</th><th>vLLM 配置</th></tr></thead>
+      <tbody>
+        <tr><td><strong>TP</strong></td><td>每层权重矩阵切分到多 GPU</td><td>🔴 高（每层 AllReduce）</td><td>单机多卡</td><td><code>--tensor-parallel-size N</code></td></tr>
+        <tr><td><strong>PP</strong></td><td>模型按层切分到多 GPU</td><td>🟡 中（层间传激活值）</td><td>跨机带宽有限</td><td><code>--pipeline-parallel-size N</code></td></tr>
+        <tr><td><strong>DP</strong></td><td>每 GPU 持有完整模型副本</td><td>🟢 低（几乎无通信）</td><td>高并发、单卡放得下</td><td><code>--data-parallel-size N</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3><span class="emoji">🏗️</span>组合示例：8 GPU，TP=2, PP=2, DP=2</h3>
+    <div class="arch-diagram">
+      <pre style="background:transparent;font-size:.8rem;line-height:1.9;">
+  DP Rank 0                          DP Rank 1
+  ┌─────────────┐                   ┌─────────────┐
+  │ GPU0  GPU1  │                   │ GPU4  GPU5  │
+  │  TP=2       │ ← PP →            │  TP=2       │ ← PP →
+  │ GPU2  GPU3  │                   │ GPU6  GPU7  │
+  └─────────────┘                   └─────────────┘
+
+<span style="color:var(--text-secondary);">总 Workers = DP × PP × TP = 8 ✅  Engine Core 数 = DP = 2</span></pre>
+    </div>
+    <div class="fde-callout">
+      <div class="clabel">🔑 选择策略</div>
+      ① 单卡放得下？→ <strong>DP</strong>（最简单） ② 单机搞的定？→ <strong>TP</strong>（NVLink 快） ③ 跨机？→ <strong>TP+PP</strong><br>
+      <strong>经验法则：DP > TP > PP</strong>（通信开销从小到大）
+    </div>
+  </div>
+
+  <!-- PD 分离详解 -->
+  <div class="card">
+    <h3><span class="emoji">🔧</span>PD 分离（Prefill-Decode Disaggregation）</h3>
+    <p style="font-size:.83rem;color:var(--text-secondary);margin-bottom:16px;">
+      将 Prefill（计算密集型）和 Decode（内存密集型）分配到<strong>不同的 GPU 集群</strong>，各自用最优硬件、独立扩缩容。
+    </p>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">为什么需要 PD 分离？</h4>
+    <div class="arch-diagram" style="font-size:.76rem;line-height:1.7;">
+      <strong>统一架构的问题：同一批 GPU 同时跑 Prefill + Decode</strong><br>
+      ❌ 长 prompt 的 Prefill（算力全满）抢占 Decode 的计算资源<br>
+      ❌ 高并发 Decode（KV Cache 吃满显存）挤压 Prefill 的 batch 空间<br>
+      ❌ 无法为两种完全不同的负载选择最优硬件<br><br>
+      <strong>PD 分离：</strong>
+      <div class="arch-row" style="justify-content:center;">
+        <div class="arch-box model">🖥️ Prefill 集群<br><small>计算优化 · H100 · TP=8 · Batch=64</small></div>
+        <span class="arch-arrow">→ KV Cache 传输 →</span>
+        <div class="arch-box worker">💾 Decode 集群<br><small>内存优化 · H200 · TP=4 · Batch=256</small></div>
+      </div>
+      ✅ Prefill 用 H100（算力强、成本低），Decode 用 H200（显存大、141GB）<br>
+      ✅ 独立扩缩：高峰期扩 Prefill，长对话扩 Decode（<strong>非对称扩缩</strong>）
+    </div>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">完整数据流</h4>
+    <div class="arch-diagram" style="font-size:.74rem;line-height:1.7;">
+      <strong>Step 1: Prefill 节点处理</strong><br>
+      &nbsp;&nbsp;接收 prompt → 一次性计算全部 KV Cache → 采样生成首 token<br><br>
+      <strong>Step 2: KV Cache 传输</strong><br>
+      &nbsp;&nbsp;Prefill 节点将 <strong>全部 KV Cache blocks + 首 token + 请求元数据</strong> 传给 Decode 节点<br>
+      &nbsp;&nbsp;传输通道：<strong>NIXL / MoonCake / RDMA</strong>（GPU 显存到 GPU 显存直通，不走 CPU 内存）<br>
+      &nbsp;&nbsp;短 prompt (~128 tokens)：~40 MB → ~3ms | 长 prompt (~4096)：~1.25 GB → ~100ms<br><br>
+      <strong>Step 3: Decode 节点继续</strong><br>
+      &nbsp;&nbsp;接收 KV Cache → 写入本地 GPU 显存 → 逐 token Decode 直到 EOS<br>
+      &nbsp;&nbsp;每步只需读 KV Cache（内存）+ 算 1 个新 token 的 Attention<br><br>
+      <strong>Step 4: Prefill 侧 blocks 处理</strong><br>
+      &nbsp;&nbsp;传输完成后：倾向<strong>保留为缓存</strong>（Prefill 节点显存压力不大）<br>
+      &nbsp;&nbsp;→ 下一个相同前缀的请求命中 → 不用重算 + 不用再传
+    </div>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">vLLM PD 分离部署 — 与 SGLang 的关键差异</h4>
+
+    <div class="fde-callout" style="margin-bottom:12px;">
+      <div class="clabel">⚠️ 重要区分</div>
+      vLLM <strong>没有</strong> <code>--disaggregation-mode</code> 参数（SGLang 有）。vLLM 的 PD 分离通过<strong>启动两个独立的 vLLM 实例 + NIXL 插件协调</strong>实现。两个实例都是完整的 vLLM Engine，通过 NIXL 插件自动发现彼此。<code>--enable-chunked-prefill</code> 和 <code>--enforce-eager</code> 是<strong>性能优化参数</strong>，不是用来声明"我是 Prefill 还是 Decode"的角色声明。
+    </div>
+
+    <div class="collapsible">
+      <button class="collapse-trigger" onclick="toggleCollapse(this)">Prefill 节点（建议配置 + 环境变量） <span class="arrow">▼</span></button>
+      <div class="collapse-content">
+        <pre style="background:#1c1917;color:#e7e5e4;padding:10px;border-radius:8px;font-size:.78rem;">
+<span style="color:#94a3b8;"># 环境变量（告诉 NIXL 对端在哪——这才是区分角色的关键）</span>
+export NCCL_NET_PLUGIN=nixl
+export NIXL_DEBUG=1
+
+vllm serve Qwen/Qwen2.5-72B-Instruct \
+  --host 0.0.0.0 --port 8001 \
+  --tensor-parallel-size 8 \
+  --max-model-len 32768 \
+  --gpu-memory-utilization 0.85 \
+  --enable-chunked-prefill
+<span style="color:#94a3b8;"># chunked-prefill = 性能优化（长 prompt 拆块），不是"声明 Prefill 角色"</span>
+<span style="color:#94a3b8;"># Prefill 特征：TP 大（算力足）、utilization 保守（给 activation 留空间）</span></pre>
+      </div>
+    </div>
+    <div class="collapsible">
+      <button class="collapse-trigger" onclick="toggleCollapse(this)">Decode 节点（建议配置 + 环境变量） <span class="arrow">▼</span></button>
+      <div class="collapse-content">
+        <pre style="background:#1c1917;color:#e7e5e4;padding:10px;border-radius:8px;font-size:.78rem;">
+<span style="color:#94a3b8;"># 环境变量（告诉 NIXL 对端在哪——这才是区分角色的关键）</span>
+export NCCL_NET_PLUGIN=nixl
+export NIXL_DEBUG=1
+
+vllm serve Qwen/Qwen2.5-72B-Instruct \
+  --host 0.0.0.0 --port 8002 \
+  --tensor-parallel-size 4 \
+  --max-model-len 32768 \
+  --gpu-memory-utilization 0.95 \
+  --max-num-seqs 256 \
+  --enforce-eager
+<span style="color:#94a3b8;"># enforce-eager = 性能优化（省 CUDA Graph 显存给 KV Cache），不是"声明 Decode 角色"</span>
+<span style="color:#94a3b8;"># Decode 特征：TP 适中、utilization 激进（更多 KV Cache）、高并发</span></pre>
+      </div>
+    </div>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">vLLM vs SGLang PD 分离配置对比</h4>
+    <table class="comparison-table" style="font-size:.8rem;">
+      <thead><tr><th>维度</th><th>SGLang</th><th>vLLM</th></tr></thead>
+      <tbody>
+        <tr><td><strong>角色声明</strong></td><td><code>--disaggregation-mode prefill/decode</code> 显式声明</td><td>无显式参数，通过 NIXL 插件环境变量区分</td></tr>
+        <tr><td><strong>启动命令</strong></td><td>两个节点参数不同（关键在 mode）</td><td>两个节点启动相同引擎，差异在插件配置和优化参数</td></tr>
+        <tr><td><strong>理解难度</strong></td><td>直观：一眼看出角色</td><td>隐式：需要理解 NIXL 插件层</td></tr>
+        <tr><td><strong>chunk-prefill</strong></td><td>Prefill 节点建议开</td><td>Prefill 节点建议开（性能优化，非角色声明）</td></tr>
+        <tr><td><strong>enforce-eager</strong></td><td>Decode 节点建议开</td><td>Decode 节点建议开（性能优化，非角色声明）</td></tr>
+      </tbody>
+    </table>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">非对称扩缩的威力</h4>
+    <table class="comparison-table" style="font-size:.8rem;">
+      <thead><tr><th>场景</th><th>现象</th><th>操作</th><th>成本</th></tr></thead>
+      <tbody>
+        <tr><td>高峰涌入大量新用户</td><td>TTFT 飙升</td><td><strong>只扩 Prefill 集群</strong>（加 H100 节点）</td><td>按需付费</td></tr>
+        <tr><td>用户在长聊</td><td>TPOT 上升</td><td><strong>只扩 Decode 集群</strong>（加 H200 节点）</td><td>按需付费</td></tr>
+        <tr><td>prompt 变长（新功能）</td><td>Prefill 负载上升</td><td>调 Prefill:Decode 比例（如 1:4 → 1:2）</td><td>无需整体扩容</td></tr>
+      </tbody>
+    </table>
+
+    <div class="fde-callout" style="margin-top:10px;">
+      <div class="clabel">🔑 FDE 排障要点</div>
+      <strong>PD 分离部署检查清单：</strong><br>
+      ① Prefill 和 Decode 节点的 <strong>模型路径必须完全一致</strong><br>
+      ② 确认 KV Cache 传输通道：<code>NIXL_DEBUG=1</code> 检查连接状态<br>
+      ③ 节点间需要 RDMA/InfiniBand——KV Cache 传输量巨大（长 prompt 可达 GB 级）<br>
+      ④ <strong>优先在单机 TP 内解决显存问题</strong>——只有单机放不下时才考虑 PD 分离<br>
+      ⑤ 监控两套指标：Prefill 节点看 TTFT、Decode 节点看 TPOT
+    </div>
+  </div>
+
+  <!-- KV Cache 传输详解 -->
+  <div class="card">
+    <h3><span class="emoji">📡</span>PD 分离中的 KV Cache 传输 -- 怎么传、怎么看日志、怎么配通</h3>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">传输通道：GPU 显存到 GPU 显存直通</h4>
+    <p style="font-size:.83rem;color:var(--text-secondary);">
+      <strong>不是 HTTP、不是 ZMQ、不是 TCP。</strong>KV Cache 通过 <strong>GPUDirect RDMA</strong> 直接从 Prefill GPU 显存经网卡推到 Decode GPU 显存，全程不经过 CPU 内存。vLLM 用 <strong>NIXL</strong>（NVIDIA 官方）或 <strong>MoonCake</strong>（字节开源）插件管理传输。
+    </p>
+    <div class="arch-diagram" style="font-size:.74rem;line-height:1.7;">
+<pre style="background:transparent;">
+Prefill GPU 显存 ──GPUDirect RDMA──▶ IB 网卡 ──400Gbps──▶ 对端 IB 网卡 ──▶ Decode GPU 显存
+     ↑                                                                    ↑
+  不经过 CPU 内存                                                    不经过 CPU 内存</pre>
+    </div>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">两个集群怎么配通？</h4>
+    <div class="collapsible">
+      <button class="collapse-trigger" onclick="toggleCollapse(this)">环境变量配置（两个节点都要设） <span class="arrow">▼</span></button>
+      <div class="collapse-content">
+        <pre style="background:#1c1917;color:#e7e5e4;padding:10px;border-radius:8px;font-size:.76rem;line-height:1.5;">
+<span style="color:#94a3b8;"># 启用 InfiniBand + NIXL 插件</span>
+export NCCL_IB_DISABLE=0
+export NCCL_NET_PLUGIN=nixl
+export NCCL_SOCKET_IFNAME=ib0
+export NIXL_DEBUG=1
+export VLLM_USE_NIXL=1
+
+<span style="color:#94a3b8;"># 如果走 RoCE（以太网 RDMA）而非原生 IB</span>
+<span style="color:#94a3b8;"># export NCCL_IB_GID_INDEX=3</span>
+<span style="color:#94a3b8;"># export NCCL_SOCKET_IFNAME=eth1</span></pre>
+      </div>
+    </div>
+    <div class="collapsible">
+      <button class="collapse-trigger" onclick="toggleCollapse(this)">网络连通性验证（部署前必做） <span class="arrow">▼</span></button>
+      <div class="collapse-content">
+        <pre style="background:#1c1917;color:#e7e5e4;padding:10px;border-radius:8px;font-size:.76rem;line-height:1.5;">
+<span style="color:#94a3b8;"># 1. IB 网卡状态</span>
+ibstat | grep -E "State|Rate"      <span style="color:#94a3b8;"># 期望: Active, 200/400 Gbps</span>
+<span style="color:#94a3b8;"># 2. RDMA 设备</span>
+ibv_devinfo | grep -E "transport|hca_id"
+<span style="color:#94a3b8;"># 3. 带宽测试（Prefill 节点执行）</span>
+ib_write_bw -d mlx5_0 --report_gbits &lt;decode_ip&gt;
+<span style="color:#94a3b8;"># 4. GPU Direct RDMA 支持</span>
+nvidia-smi nvlink --capabilities | grep -i gpudirect</pre>
+      </div>
+    </div>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">日志在哪里？按优先级看</h4>
+    <table class="comparison-table" style="font-size:.78rem;">
+      <thead><tr><th>优先级</th><th>日志来源</th><th>关键 grep</th><th>怎么看</th></tr></thead>
+      <tbody>
+        <tr style="background:#fef2f2;"><td><strong>① 最先看</strong></td><td>NCCL + NIXL</td><td><code>grep "NCCL.*transport\|NIXL\|gpudirect"</code></td><td>确认走 NIXL 而非 TCP、GPUDirect 是否启用</td></tr>
+        <tr><td><strong>②</strong></td><td>vLLM Engine</td><td><code>grep "disaggregat\|KV.*transfer"</code></td><td>看 PD 连接建立、传输了多少 block</td></tr>
+        <tr><td><strong>③</strong></td><td>系统</td><td><code>nvidia-smi dmon -s pucv -d 1</code></td><td>看 PCIe Tx/Rx 吞吐峰值</td></tr>
+      </tbody>
+    </table>
+
+    <h4 style="font-size:.9rem;font-weight:700;margin:10px 0 6px;">问题排查速查表</h4>
+    <table class="comparison-table" style="font-size:.76rem;">
+      <thead><tr><th>现象</th><th>日志特征</th><th>原因</th><th>解决</th></tr></thead>
+      <tbody>
+        <tr><td>传输不工作</td><td><code>NCCL INFO NET/Socket</code></td><td>NCCL 没检测到 IB</td><td><code>NCCL_IB_DISABLE=0</code></td></tr>
+        <tr><td>传输极慢</td><td><code>GPUDirect RDMA disabled</code></td><td>GDR 不支持</td><td><code>nvidia-smi nvlink --capabilities</code></td></tr>
+        <tr><td>连接超时</td><td><code>NIXL ERROR: Failed</code></td><td>IB 网不通</td><td><code>ibping + ib_write_bw</code></td></tr>
+        <tr><td>中途断连</td><td><code>Connection closed</code></td><td>硬件异常</td><td><code>ibstat</code> 看 link down 次数</td></tr>
+        <tr><td>OOM</td><td>CUDA OOM</td><td>显存不够</td><td>降 <code>gpu-memory-utilization</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="info-callout" style="margin-top:8px;">
+      <div class="clabel">🛠️ 启动命令示例（开启全量调试日志）</div>
+      <pre style="background:#1c1917;color:#e7e5e4;padding:8px;border-radius:6px;font-size:.75rem;">NCCL_DEBUG=INFO NCCL_DEBUG_SUBSYS=INIT,NET NIXL_DEBUG=1 \
+vllm serve ... 2>&1 | tee vllm-pd-$(date +%Y%m%d-%H%M).log</pre>
+    </div>
+  </div>
+
+  <div class="takeaways-box">
+    <div class="tk-label">📝 要点回顾</div>
+    <ul>
+      <li><strong>TP</strong> = 权重切分（通信多），<strong>PP</strong> = 按层切分（通信中），<strong>DP</strong> = 复制模型（通信少）</li>
+      <li>选择顺序：<strong>DP > TP > PP</strong></li>
+      <li>PD 分离 = Prefill(H100,强算力) + Decode(H200,大显存)，KV Cache 通过 GPUDirect RDMA 传输</li>
+      <li>传输排查三件套：<code>NCCL_DEBUG=INFO</code> + <code>NIXL_DEBUG=1</code> + <code>ib_write_bw</code> 带宽测试</li>
+      <li>核心价值：<strong>非对称扩缩</strong>——谁不够就扩谁，不用整体升级</li>
+    </ul>
+  </div>
+
+  <div class="section-nav">
+    <button class="nav-btn" onclick="switchTab('batching')">← 上一节：调度与批处理</button>
+    <button class="nav-btn" onclick="switchTab('deployment')">下一节：部署实战 →</button>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 7: 部署实战 -->
+<!-- ================================================================ -->
+<section class="section container" id="sec-deployment">
+  <h2 class="section-title">🚀 部署实战</h2>
+  <p class="section-desc">从安装到多机部署，FDE 每天的 bread and butter。</p>
+  <div class="objectives-box">
+    <div class="obj-label">🎯 本模块学习目标</div>
+    <ul>
+      <li>能独立完成 vLLM <strong>单机安装 + 启动 + API 调用</strong>全流程</li>
+      <li>理解每个启动参数<strong>用白话怎么说</strong>（不只是背命令）</li>
+      <li>掌握 <strong>Ray 集群多机部署</strong>：理解 vLLM 如何通过 <code>ray.init(address="auto")</code> 自动发现集群</li>
+      <li>能独立排查 Ray 相关的常见问题（版本不一致、NCCL 跨节点超时、Worker 掉线等）</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="emoji">📦</span>标准部署流程</h3>
+    <div class="collapsible open">
+      <button class="collapse-trigger" onclick="toggleCollapse(this)">① 安装 <span class="arrow">▼</span></button>
+      <div class="collapse-content">
+        <pre style="background:#1c1917;color:#e7e5e4;padding:10px;border-radius:8px;">uv pip install vllm --torch-backend=auto</pre>
+        <p style="font-size:.8rem;color:var(--text-secondary);">Python 3.10–3.13。uv 自动选正确的 PyTorch 索引。</p>
+      </div>
+    </div>
+    <div class="collapsible">
+      <button class="collapse-trigger" onclick="toggleCollapse(this)">② 单机多卡启动 <span class="arrow">▼</span></button>
+      <div class="collapse-content">
+        <pre style="background:#1c1917;color:#e7e5e4;padding:10px;border-radius:8px;">vllm serve Qwen/Qwen2.5-1.5B-Instruct \
+  --host 0.0.0.0 --port 8000 \
+  --tensor-parallel-size 2 \
+  --max-model-len 8192 \
+  --gpu-memory-utilization 0.90 \
+  --enable-prefix-caching</pre>
+      </div>
+    </div>
+
+    <!-- Code Translation -->
+    <div style="margin:14px 0;">
+      <h4 style="font-size:.9rem;font-weight:700;margin-bottom:8px;">🔤 命令 → 白话翻译</h4>
+      <div class="code-translation">
+        <div class="ct-code"><div class="ct-label code-label">💻 命令</div><code>vllm serve</code></div>
+        <div class="ct-plain"><div class="ct-label plain-label">🗣️ 白话</div>"启动一个推理服务，帮我加载模型并暴露 API"</div>
+        <div class="ct-code"><code>Qwen/Qwen2.5-1.5B-Instruct</code></div>
+        <div class="ct-plain">"用 Qwen 2.5 的 15 亿参数指令微调版模型"（HuggingFace 上的路径）</div>
+        <div class="ct-code"><code>--host 0.0.0.0 --port 8000</code></div>
+        <div class="ct-plain">"监听所有网络接口的 8000 端口"（别只用 localhost，容器里访问不到）</div>
+        <div class="ct-code"><code>--tensor-parallel-size 2</code></div>
+        <div class="ct-plain">"我有 2 张 GPU，把模型权重切开分给它们"（降低单卡显存压力）</div>
+        <div class="ct-code"><code>--max-model-len 8192</code></div>
+        <div class="ct-plain">"用户的输入+输出最长 8192 个 token"（决定了 KV Cache 预留多少显存）</div>
+        <div class="ct-code"><code>--gpu-memory-utilization 0.90</code></div>
+        <div class="ct-plain">"让 vLLM 用 GPU 显存的 90%，留 10% 给 CUDA 运行时"（别设 1.0！）</div>
+        <div class="ct-code"><code>--enable-prefix-caching</code></div>
+        <div class="ct-plain">"如果多个用户用同一个 system prompt，只算一次 KV Cache，后面的直接复用"</div>
+      </div>
+    </div>
+
+    <div class="collapsible">
+      <button class="collapse-trigger" onclick="toggleCollapse(this)">③ OpenAI 兼容 API 调用 <span class="arrow">▼</span></button>
+      <div class="collapse-content">
+        <pre style="background:#1c1917;color:#e7e5e4;padding:10px;border-radius:8px;"><span style="color:#94a3b8;"># Chat Completions</span>
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"Qwen/Qwen2.5-1.5B-Instruct",
+       "messages":[{"role":"user","content":"Hello!"}],
+       "max_tokens":100,"temperature":0.7}'
+
+<span style="color:#94a3b8;"># 模型列表 & 健康检查</span>
+curl http://localhost:8000/v1/models
+curl http://localhost:8000/health</pre>
+      </div>
+    </div>
+    <div class="collapsible">
+      <button class="collapse-trigger" onclick="toggleCollapse(this)">④ Ray 集群多机部署 — vLLM 如何与 Ray 关联？ <span class="arrow">▼</span></button>
+      <div class="collapse-content">
+
+        <h4 style="font-weight:700;font-size:.88rem;margin:10px 0 6px;">🔗 vLLM 如何发现 Ray 集群？</h4>
+        <p style="font-size:.83rem;color:var(--text-secondary);">
+          vLLM <strong>不需要</strong>在命令行参数中指定 Ray 地址。它通过 <strong>环境感知</strong> 自动判断：
+        </p>
+        <div class="arch-diagram" style="font-size:.76rem;line-height:1.8;">
+          <code>vllm serve ...</code> 启动时内部逻辑:<br><br>
+          <span style="color:#c084fc;">if</span> 检测到 <code>RAY_ADDRESS</code> 环境变量 <span style="color:#c084fc;">or</span> 本地已有 Ray 进程:<br>
+          &nbsp;&nbsp;→ 调用 <code>ray.init(address="auto")</code> 自动连接集群<br>
+          &nbsp;&nbsp;→ GPU Workers 通过 <strong>Ray Actor</strong> 跨节点分布<br>
+          <span style="color:#c084fc;">else</span>:<br>
+          &nbsp;&nbsp;→ 使用本地 Python <code>multiprocessing</code><br>
+          &nbsp;&nbsp;→ GPU Workers 作为本地子进程启动
+        </div>
+        <p style="font-size:.83rem;color:var(--text-secondary);margin-top:8px;">
+          <strong>关键：</strong><code>ray start --head</code> 会自动设置 <code>RAY_ADDRESS</code> 环境变量。你在同一台机器上启动 vLLM 时，它自动就能连上。
+        </p>
+
+        <h4 style="font-weight:700;font-size:.88rem;margin:10px 0 6px;">📋 完整部署步骤</h4>
+        <pre style="background:#1c1917;color:#e7e5e4;padding:10px;border-radius:8px;line-height:1.5;font-size:.78rem;">
+<span style="color:#94a3b8;"># ===== 头节点 =====</span>
+<span style="color:#94a3b8;"># 1. 启动 Ray 头节点（"注册中心"）</span>
+ray start --head --port=6379
+<span style="color:#94a3b8;"># 输出: Next steps: ray start --address='192.168.1.10:6379'</span>
+
+<span style="color:#94a3b8;"># ===== 每台 Worker 节点 =====</span>
+<span style="color:#94a3b8;"># 2. 加入集群</span>
+ray start --address='192.168.1.10:6379'
+<span style="color:#94a3b8;"># 输出: Connected to Ray cluster. Node count: 3, Total GPU: 24</span>
+
+<span style="color:#94a3b8;"># ===== 头节点 =====</span>
+<span style="color:#94a3b8;"># 3. 验证集群（确保所有节点都在）</span>
+ray status
+<span style="color:#94a3b8;"># 输出应显示所有节点和 GPU 数</span>
+
+<span style="color:#94a3b8;"># 4. 启动 vLLM（不传 Ray 地址！自动连接）</span>
+vllm serve meta-llama/Llama-3.1-70B-Instruct \
+  --tensor-parallel-size 8 \
+  --pipeline-parallel-size 2
+<span style="color:#94a3b8;"># vLLM 自动通过 ray.init(address="auto") 发现集群</span>
+<span style="color:#94a3b8;"># 日志: INFO: Connected to Ray cluster. Total GPUs: 24</span></pre>
+
+        <h4 style="font-weight:700;font-size:.88rem;margin:10px 0 6px;">⚙️ Ray 在 vLLM 中的作用：分布式进程管理器</h4>
+        <p style="font-size:.83rem;color:var(--text-secondary);">
+          vLLM 启动时，根据 TP × PP × DP 计算出需要的 GPU Worker 数量（如 TP=8, PP=2 → 16 个 Worker）。然后通过 Ray 在集群中创建 <strong>Ray Actor</strong>：
+        </p>
+        <div class="arch-diagram" style="font-size:.76rem;line-height:1.8;">
+          没有 Ray (单机):<br>
+          &nbsp;&nbsp;vLLM → Python multiprocessing → N 个本地子进程，每个绑一张 GPU<br><br>
+          有 Ray (多机):<br>
+          &nbsp;&nbsp;vLLM → <code>ray.init(address="auto")</code> → 创建 Ray Actors<br>
+          &nbsp;&nbsp;每个 Actor 用 <code>@ray.remote(num_gpus=1)</code> 声明需要 1 张 GPU<br>
+          &nbsp;&nbsp;Ray 自动决定 rank=0~7 放机器A，rank=8~15 放机器B<br>
+          &nbsp;&nbsp;→ 你不需要手动指定每个 Worker 的位置！
+        </div>
+
+        <h4 style="font-weight:700;font-size:.88rem;margin:10px 0 6px;">⚠️ 常见踩坑与排查</h4>
+        <table class="comparison-table" style="font-size:.8rem;">
+          <thead><tr><th>现象</th><th>原因</th><th>排查/解决</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Worker 节点不显示 GPU</td>
+              <td>每台 Worker 忘了执行 <code>ray start</code></td>
+              <td><code>ray status</code> 看 Node count 和 GPU 总数；在 Worker 上执行 <code>ray start --address=...</code></td>
+            </tr>
+            <tr>
+              <td>vLLM 只用头节点的 GPU</td>
+              <td>Worker 节点 Ray 未连接或 GPU 不可见</td>
+              <td>每个节点单独验证 <code>nvidia-smi</code>；确保加入集群前 GPU 驱动正常</td>
+            </tr>
+            <tr>
+              <td>Ray 版本不一致报错</td>
+              <td>不同节点 pip 安装的 Ray 版本不同</td>
+              <td><code>pip install ray==2.9.0</code> 统一版本；所有节点一致</td>
+            </tr>
+            <tr>
+              <td>头节点重启后 Worker 掉线</td>
+              <td><code>ray stop</code> 不会通知 Worker 重连</td>
+              <td>每个 Worker 重新执行 <code>ray stop && ray start --address=...</code></td>
+            </tr>
+            <tr>
+              <td>NCCL 跨节点通信超时</td>
+              <td>NCCL 用了错误网卡或防火墙阻挡</td>
+              <td><code>NCCL_DEBUG=INFO</code> 看日志；<code>export NCCL_SOCKET_IFNAME=ib0</code> 指定高速网卡</td>
+            </tr>
+            <tr>
+              <td>多机下 CUDA 版本不一致</td>
+              <td>不同节点装的 CUDA toolkit 版本不同</td>
+              <td><code>nvcc --version</code> + <code>nvidia-smi</code> 对比；统一镜像部署</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="fde-callout" style="margin-top:10px;">
+          <div class="clabel">🔑 FDE 视角</div>
+          <strong>vLLM + Ray 的核心关系：</strong>vLLM 不传 Ray 地址 → 通过 <code>ray.init(address="auto")</code> 自动检测环境变量 → Ray 作为分布式进程管理器分配 Worker 到各节点 → vLLM 只关心"我有 16 个 Worker"，不关心"它们在哪个物理节点"。<br><br>
+          <strong>排查口诀：</strong><code>ray status</code> 看集群 → 每节点 <code>nvidia-smi</code> 看 GPU → <code>NCCL_DEBUG=INFO</code> 看通信 → vLLM 日志看 Worker 数是否匹配 TP×PP×DP。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="takeaways-box">
+    <div class="tk-label">📝 要点回顾</div>
+    <ul>
+      <li><code>vllm serve 模型路径</code> 是最小启动，其余参数根据场景叠加</li>
+      <li>每个参数都在控制<strong>显存分配</strong>：utilization、max-model-len、TP size</li>
+      <li>多机部署的核心：<code>ray start --head</code> 在各 Worker 节点 <code>ray start --address=...</code>，vLLM 通过 <code>ray.init(address="auto")</code> <strong>自动发现</strong>集群，不需要传 Ray 地址</li>
+      <li>Ray 在 vLLM 中扮演 <strong>分布式进程管理器</strong>：用 Ray Actor 自动将 GPU Worker 分配到各节点</li>
+      <li>排查四件套：<code>ray status</code> → <code>nvidia-smi</code> → <code>NCCL_DEBUG=INFO</code> → vLLM 启动日志</li>
+    </ul>
+  </div>
+
+  <!-- Quick Check -->
+  <div class="quick-check" id="qc-deploy">
+    <div class="qc-q">🧪 快速自检：<code>--gpu-memory-utilization 1.0</code> 会有什么风险？</div>
+    <span class="qc-opt" onclick="checkQuick(this,'qc-deploy',0)">A. 吞吐量降低</span>
+    <span class="qc-opt" onclick="checkQuick(this,'qc-deploy',1)">B. CUDA context 无显存可用 → OOM</span>
+    <span class="qc-opt" onclick="checkQuick(this,'qc-deploy',2)">C. 模型加载更快</span>
+    <span class="qc-opt" onclick="checkQuick(this,'qc-deploy',3)">D. API 端口冲突</span>
+    <div class="qc-fb"></div>
+  </div>
+
+  <div class="section-nav">
+    <button class="nav-btn" onclick="switchTab('distributed')">← 上一节：分布式推理</button>
+    <button class="nav-btn" onclick="switchTab('tuning')">下一节：性能调优 →</button>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 8: 性能调优 -->
+<!-- ================================================================ -->
+<section class="section container" id="sec-tuning">
+  <h2 class="section-title">🎛️ 性能调优</h2>
+  <p class="section-desc">FDE 核心竞争力：知道每个参数调了会影响什么。</p>
+  <div class="objectives-box">
+    <div class="obj-label">🎯 本模块学习目标</div>
+    <ul>
+      <li>区分 8 个关键参数的<strong>影响级别</strong>（🔴关键 / 🟡中等 / 🟢高级）</li>
+      <li>掌握 FDE 调优三原则：<strong>先量后调、一参一变、显存第一</strong></li>
+      <li>知道 <code>nvidia-smi</code> 和 <code>dcgmi dmon</code> 是最常用的监控工具</li>
+    </ul>
+  </div>
+
+  <div class="config-grid">
+    <div class="config-card">
+      <span class="param">--gpu-memory-utilization</span><span class="impact impact-high">关键</span>
+      <p class="desc">GPU 显存使用比例（默认 0.90）。过高→OOM；过低→浪费。从 0.85 开始上调。</p>
+    </div>
+    <div class="config-card">
+      <span class="param">--max-model-len</span><span class="impact impact-high">关键</span>
+      <p class="desc">最大上下文长度。不要设得比实际需求大太多，否则 KV Cache 吃满显存。</p>
+    </div>
+    <div class="config-card">
+      <span class="param">--max-num-seqs</span><span class="impact impact-high">关键</span>
+      <p class="desc">最大并发序列数。越大并发越高但每请求 KV Cache 越少。权衡并发 vs 延迟。</p>
+    </div>
+    <div class="config-card">
+      <span class="param">--tensor-parallel-size</span><span class="impact impact-med">中等</span>
+      <p class="desc">TP 切分数（2 的幂）。越大单请求延迟越低，通信开销也越大。</p>
+    </div>
+    <div class="config-card">
+      <span class="param">--block-size</span><span class="impact impact-low">高级</span>
+      <p class="desc">KV block 大小（默认 16 tokens）。越大越快但可能浪费内存。</p>
+    </div>
+    <div class="config-card">
+      <span class="param">--max-num-batched-tokens</span><span class="impact impact-med">中等</span>
+      <p class="desc">单次迭代最大 token 数。影响 GPU 利用率，越大效率越高延迟也越高。</p>
+    </div>
+    <div class="config-card">
+      <span class="param">--enable-prefix-caching</span><span class="impact impact-high">关键</span>
+      <p class="desc">前缀缓存。有共享 system prompt 时<strong>强烈建议开启</strong>。</p>
+    </div>
+    <div class="config-card">
+      <span class="param">--enable-chunked-prefill</span><span class="impact impact-med">中等</span>
+      <p class="desc">分块预填充。长 prompt 下<strong>建议开启</strong>，避免 Prefill 阻塞 Decode。</p>
+    </div>
+  </div>
+
+  <div class="fde-callout">
+    <div class="clabel">🔑 调优三原则</div>
+    ① <strong>先量后调</strong>：benchmark 先测现状 ② <strong>一参一变</strong>：每次只改一个参数 ③ <strong>显存第一</strong>：<code>nvidia-smi</code> 和 <code>dcgmi dmon</code> 是 FDE 最好的朋友
+  </div>
+
+  <div class="takeaways-box">
+    <div class="tk-label">📝 要点回顾</div>
+    <ul>
+      <li>显存相关参数（utilization、max-model-len、max-num-seqs）<strong>影响最大</strong></li>
+      <li><code>--enable-prefix-caching</code> 和 <code>--enable-chunked-prefill</code> 是<strong>性价比最高</strong>的两个开关</li>
+      <li>调优前先 benchmark，每次只改一个参数，永远先看 <code>nvidia-smi</code></li>
+    </ul>
+  </div>
+
+  <div class="section-nav">
+    <button class="nav-btn" onclick="switchTab('deployment')">← 上一节：部署实战</button>
+    <button class="nav-btn" onclick="switchTab('cheatsheet')">下一节：FDE 速查 →</button>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 9: FDE 速查 -->
+<!-- ================================================================ -->
+<section class="section container" id="sec-cheatsheet">
+  <h2 class="section-title">📋 FDE 速查手册</h2>
+  <p class="section-desc">面试前快速过一遍，日常排查快速查。</p>
+
+  <div class="cheat-grid">
+    <div class="cheat-item">
+      <h4>🔍 GPU 使用情况</h4>
+      <pre>nvidia-smi
+dcgmi dmon -e 155,156,203,204,1001,1002</pre>
+    </div>
+    <div class="cheat-item">
+      <h4>📊 Benchmark 吞吐</h4>
+      <pre>vllm bench serve \
+  --host 127.0.0.1 --port 8000 \
+  --num-prompts 1000 \
+  --request-rate 10</pre>
+    </div>
+    <div class="cheat-item">
+      <h4>🩺 NCCL 调试</h4>
+      <pre>NCCL_DEBUG=INFO vllm serve ...</pre>
+      <p style="font-size:.76rem;color:var(--text-secondary);">搜索 <code>NCCL WARN</code> 和 <code>NCCL ERROR</code></p>
+    </div>
+    <div class="cheat-item">
+      <h4>🧹 Ray 集群管理</h4>
+      <pre>ray stop
+ray start --head</pre>
+    </div>
+    <div class="cheat-item">
+      <h4>📉 OOM 排查</h4>
+      <pre>--gpu-memory-utilization 0.80
+--max-model-len 4096
+--max-num-seqs 32</pre>
+    </div>
+    <div class="cheat-item">
+      <h4>🏥 健康检查</h4>
+      <pre>curl http://localhost:8000/health
+curl http://localhost:8000/v1/models</pre>
+    </div>
+    <div class="cheat-item">
+      <h4>📈 关键 Prometheus 指标</h4>
+      <pre>vllm_num_requests_waiting
+vllm_num_blocks_available
+vllm_prefill_duration
+vllm_time_in_queue</pre>
+    </div>
+    <div class="cheat-item">
+      <h4>⏱️ Benchmark 延迟</h4>
+      <pre>vllm bench serve \
+  --percentile-metrics \
+  --metric-percentiles 50,90,99</pre>
+    </div>
+  </div>
+
+  <div class="section-nav">
+    <button class="nav-btn" onclick="switchTab('tuning')">← 上一节：性能调优</button>
+    <button class="nav-btn" onclick="switchTab('quiz')">下一节：自测挑战 →</button>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 10: 自测挑战 -->
+<!-- ================================================================ -->
+<section class="section container" id="sec-quiz">
+  <h2 class="section-title">🧪 自测挑战</h2>
+  <p class="section-desc">检验你对 vLLM 的理解。8 道题覆盖从基础到排障，答完即时出分。</p>
+  <div id="quizContainer"></div>
+  <div id="quizResult" style="display:none;"></div>
+
+  <div class="section-nav">
+    <button class="nav-btn" onclick="switchTab('cheatsheet')">← 上一节：FDE 速查</button>
+    <span></span>
+  </div>
+</section>
+
+<!-- Scroll to top -->
+<button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">⬆</button>
+
+<script>
+// ===== CONSTANTS =====
+const TAB_ORDER = ['roadmap','overview','architecture','pagedattention','batching','distributed','deployment','tuning','cheatsheet','quiz'];
+const TOTAL_MODULES = 10;
+
+// ===== Tab Navigation =====
+const explored = new Set(['roadmap']);
+
+function switchTab(target) {
+  document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  const tabBtn = document.querySelector(`[data-tab="${target}"]`);
+  if (tabBtn) tabBtn.classList.add('active');
+  const section = document.getElementById('sec-' + target);
+  if (section) section.classList.add('active');
+  explored.add(target);
+  updateProgress();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.querySelectorAll('.tab-btn').forEach(tab => {
+  tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+});
+
+// Roadmap clickable steps
+document.querySelectorAll('.roadmap-step').forEach(step => {
+  step.addEventListener('click', () => {
+    const target = step.dataset.goto;
+    if (target) switchTab(target);
+  });
+});
+
+function updateProgress() {
+  const pct = Math.round((explored.size / TOTAL_MODULES) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = '已探索 ' + explored.size + ' / ' + TOTAL_MODULES + ' 个模块';
+  // Update roadmap steps
+  document.querySelectorAll('.roadmap-step').forEach(step => {
+    const goto = step.dataset.goto;
+    if (goto && explored.has(goto)) step.classList.add('done');
+  });
+}
+
+// ===== Collapsible =====
+function toggleCollapse(btn) {
+  btn.closest('.collapsible').classList.toggle('open');
+}
+
+// ===== Architecture Detail =====
+const archDetails = {
+  archAPI: '<strong>API Server</strong> — HTTP 入口，负责 Tokenization（文本→token IDs）、多模态预处理。通过 ZMQ 与 Engine Core 通信。',
+  archEngine: '<strong>Engine Core</strong> — 核心调度进程（每个 DP rank 一个）。运行 busy loop：① 调度决策 ② KV Cache block 分配/释放 ③ 分发 GPU Workers。',
+  archWorker: '<strong>GPU Worker</strong> — 每 GPU 一个进程。负责权重加载 + forward pass。Worker 数 = DP × PP × TP。',
+  archDP: '<strong>DP Coordinator</strong> — 仅在 DP>1 时存在。跨 DP rank 负载均衡 + MoE 同步。'
+};
+document.querySelectorAll('.arch-box').forEach(box => {
+  box.addEventListener('click', function() {
+    const detail = archDetails[this.id];
+    const dd = document.getElementById('archDetail');
+    if (detail) { dd.innerHTML = '<p>'+detail+'</p>'; dd.style.display='block'; }
+  });
+});
+
+// ===== PagedAttention Viz =====
+function buildViz() {
+  const trad = document.getElementById('vizTraditional');
+  const paged = document.getElementById('vizPaged');
+  const tradLayout = [];
+  const alloc = (s,l,c) => { for(let i=s;i<s+l&&i<40;i++) tradLayout[i]=c; };
+  alloc(0,5,'used'); alloc(5,7,'used'); alloc(12,4,'used');
+  for(let i=5;i<12;i++) tradLayout[i]='fragment';
+  alloc(16,6,'used'); alloc(22,3,'used');
+  for(let i=25;i<28;i++) tradLayout[i]='fragment';
+  alloc(28,8,'used');
+  trad.innerHTML = '';
+  for(let i=0;i<36;i++) {
+    const d=document.createElement('div');
+    d.className='viz-block '+(tradLayout[i]||'free'); d.textContent=i; trad.appendChild(d);
+  }
+  document.getElementById('tradUtil').textContent='≈35%';
+
+  paged.innerHTML = '';
+  const pl = [];
+  [0,3,7,10,14,18,22,26].forEach(i=>pl[i]='used');
+  [1,4,8,11,15,19].forEach(i=>pl[i]='shared');
+  [2,5,6,9,12,13,16,17,20,21,23,24,25,27,28,29,30,31,32,33,34,35].forEach(i=>{if(!pl[i])pl[i]='used';});
+  for(let i=0;i<36;i++) {
+    const d=document.createElement('div');
+    d.className='viz-block '+(pl[i]==='shared'?'shared':(pl[i]||'free')); d.textContent=i; paged.appendChild(d);
+  }
+  document.getElementById('pagedUtil').textContent='≈96%';
+}
+function resetViz() { buildViz(); }
+
+// ===== Checklist =====
+function toggleCheck(li) {
+  li.classList.toggle('checked');
+  const checked = {};
+  document.querySelectorAll('.checklist li').forEach(l => {
+    if (l.classList.contains('checked')) checked[l.dataset.key] = true;
+  });
+  localStorage.setItem('vllm-checklist', JSON.stringify(checked));
+}
+// Load saved checklist
+try {
+  const saved = JSON.parse(localStorage.getItem('vllm-checklist') || '{}');
+  document.querySelectorAll('.checklist li').forEach(li => {
+    if (saved[li.dataset.key]) li.classList.add('checked');
+  });
+} catch(e) {}
+
+// ===== Quiz =====
+const quizData = [
+  {
+    q: 'LLM 推理中，KV Cache 的核心作用是什么？',
+    options: ['加速模型训练', '避免每次生成新 token 时重复计算历史 tokens 的 Attention', '减少模型参数数量', '提高 tokenization 速度'],
+    answer: 1,
+    explain: 'KV Cache 缓存了之前所有 token 的 Key 和 Value，这样每次生成新 token 时只需要计算新 token 的 Attention，避免 O(n²) 的重复计算。代价是需要大量显存存储。'
+  },
+  {
+    q: 'Prefill 阶段和 Decode 阶段的主要区别是什么？',
+    options: ['Prefill 用 CPU，Decode 用 GPU', 'Prefill 是计算密集型（处理整个 prompt），Decode 是内存密集型（逐 token 生成）', 'Prefill 比 Decode 快', '两者没有本质区别'],
+    answer: 1,
+    explain: 'Prefill 一次性并行处理整个 prompt 的所有 token，是计算密集型。Decode 每次只生成 1 个 token，大部分时间在读取 KV Cache，是内存密集型。TTFT 主要受 Prefill 影响。'
+  },
+  {
+    q: 'PagedAttention 的核心思想借鉴了什么？',
+    options: ['数据库索引', '操作系统虚拟内存分页', 'CPU 分支预测', '文件系统日志'],
+    answer: 1,
+    explain: '借鉴 OS 虚拟内存分页：通过 Block Table 将逻辑连续的 token 序列映射到非连续的物理 KV blocks，消除显存碎片，利用率从 20-40% 提升到 90%+。'
+  },
+  {
+    q: 'Continuous Batching 相比 Static Batching 的核心改进是什么？',
+    options: ['使用更大 batch size', '请求可在任意时刻加入/离开 batch（Iteration-level 调度）', '使用更快 GPU', '减少模型参数'],
+    answer: 1,
+    explain: 'Iteration-level scheduling：每个迭代重新决定哪些请求参与。完成的立即退出，新请求随时加入。吞吐量可提升 10-20x。'
+  },
+  {
+    q: '哪种并行策略的通信开销最大？',
+    options: ['Data Parallelism (DP)', 'Pipeline Parallelism (PP)', 'Tensor Parallelism (TP)', '开销一样'],
+    answer: 2,
+    explain: 'TP 每层都需要 AllReduce，通信量最大；PP 只需在层边界传激活值；DP 几乎无通信。部署优先 DP > TP > PP。'
+  },
+  {
+    q: 'TTFT 主要受哪个阶段影响？',
+    options: ['Decode 阶段', 'Prefill 阶段', '模型加载阶段', '网络传输阶段'],
+    answer: 1,
+    explain: 'TTFT 主要受 Prefill 影响——因为 Prefill 需要一次性处理整个 prompt。Chunked Prefill 和 Prefix Caching 都是优化 TTFT 的手段。'
+  },
+  {
+    q: 'vLLM V1 架构中，KV Cache 由哪个进程管理？',
+    options: ['GPU Worker', 'API Server', 'Engine Core', '各自管理'],
+    answer: 2,
+    explain: 'KV Cache 集中在 Engine Core 中管理，使调度决策和 KV Cache 分配可以零延迟协同，避免跨进程通信延迟。'
+  },
+  {
+    q: 'TTFT 突然飙升，首先应该检查什么？',
+    options: ['重启服务', '检查 num_requests_waiting 和 KV Cache 余量，区分是排队问题还是 Prefill 计算问题', '直接增大 GPU', '换一个模型'],
+    answer: 1,
+    explain: 'FDE 排障第一步永远是定位瓶颈阶段。用 Prometheus 指标区分"排队等 KV Cache"还是"Prefill 计算慢"，然后针对性处理。'
+  }
+];
+
+function buildQuiz() {
+  const container = document.getElementById('quizContainer');
+  container.innerHTML = '';
+  quizData.forEach((item, idx) => {
+    const card = document.createElement('div');
+    card.className = 'quiz-card'; card.id = 'quiz-' + idx;
+    card.innerHTML = `
+      <div class="quiz-question">Q${idx+1}. ${item.q}</div>
+      ${item.options.map((opt, oi) => `
+        <button class="quiz-option" onclick="selectAnswer(this, ${idx}, ${oi})">
+          ${String.fromCharCode(65+oi)}. ${opt}
+        </button>`).join('')}
+      <div class="quiz-feedback" id="feedback-${idx}"></div>`;
+    container.appendChild(card);
+  });
+}
+
+const quizState = {};
+function selectAnswer(btn, qIdx, oIdx) {
+  if (quizState[qIdx] !== undefined) return;
+  const card = document.getElementById('quiz-'+qIdx);
+  const options = card.querySelectorAll('.quiz-option');
+  const correct = quizData[qIdx].answer;
+  const fb = document.getElementById('feedback-'+qIdx);
+  options.forEach(o => o.classList.add('disabled'));
+  if (oIdx === correct) {
+    quizState[qIdx]=true; btn.classList.add('correct-answer'); card.classList.add('correct');
+    fb.className='quiz-feedback correct show'; fb.textContent='✅ 正确！'+quizData[qIdx].explain;
+  } else {
+    quizState[qIdx]=false; btn.classList.add('wrong-answer'); options[correct].classList.add('correct-answer');
+    card.classList.add('wrong'); fb.className='quiz-feedback wrong show';
+    fb.textContent='❌ 答案是 '+String.fromCharCode(65+correct)+'。'+quizData[qIdx].explain;
+  }
+  checkAllAnswered();
+}
+
+function checkAllAnswered() {
+  const answered = Object.keys(quizState).length;
+  if (answered === quizData.length) {
+    const score = Object.values(quizState).filter(Boolean).length;
+    const rd = document.getElementById('quizResult'); rd.style.display='block';
+    let emoji, msg, bg, color;
+    if (score >= 7) { emoji='🏆'; msg='优秀！FDE 面试稳了！'; bg='#f0fdf4'; color='#065f46'; }
+    else if (score >= 5) { emoji='👍'; msg='不错！重点复习 PagedAttention 和分布式推理。'; bg='#fffbeb'; color='#92400e'; }
+    else { emoji='📚'; msg='建议从头系统学习一遍，打好基础再挑战。'; bg='#fef2f2'; color='#991b1b'; }
+    rd.innerHTML = `<div class="quiz-score" style="background:${bg};color:${color};">${emoji} 得分：${score} / ${quizData.length}<br><span style="font-size:.85rem;font-weight:400;">${msg}</span></div>`;
+  }
+}
+
+// ===== Scroll Top =====
+window.addEventListener('scroll', () => {
+  document.getElementById('scrollTop').classList.toggle('visible', window.scrollY > 500);
+});
+
+// ===== Chat Replay Animation =====
+function replayChat() {
+  const msgs = document.querySelectorAll('#chatThread .chat-msg');
+  msgs.forEach(m => m.classList.remove('visible'));
+  msgs.forEach((m, i) => {
+    setTimeout(() => m.classList.add('visible'), i * 700);
+  });
+}
+// Auto-play on first visit
+setTimeout(() => replayChat(), 600);
+
+// ===== Quick Check =====
+const qcAnswers = {
+  'qc-batching': { correct: 1, explain: '正确！Static Batching 中所有请求必须同时结束，短请求完成后 GPU 空闲等待长请求，产生"气泡"。Continuous Batching 的 Iteration-level 调度正好解决这个问题。' },
+  'qc-deploy': { correct: 1, explain: '正确！CUDA 运行时（context、kernel launches 等）也需要显存。utilization 设 1.0 意味着 vLLM 试图占用全部显存，CUDA runtime 将无内存可用，导致 OOM。' }
+};
+function checkQuick(btn, qcId, chosenIdx) {
+  const qc = document.getElementById(qcId);
+  if (qc.dataset.answered) return;
+  qc.dataset.answered = '1';
+  const answer = qcAnswers[qcId];
+  const opts = qc.querySelectorAll('.qc-opt');
+  const fb = qc.querySelector('.qc-fb');
+  opts.forEach(o => o.classList.add('disabled'));
+  if (chosenIdx === answer.correct) {
+    btn.classList.add('chosen-correct');
+    qc.classList.add('correct');
+    fb.className = 'qc-fb show';
+    fb.innerHTML = '<span style="color:#065f46;">✅ 正确！</span> ' + answer.explain;
+  } else {
+    btn.classList.add('chosen-wrong');
+    opts[answer.correct].classList.add('chosen-correct');
+    qc.classList.add('wrong');
+    fb.className = 'qc-fb show';
+    fb.innerHTML = '<span style="color:#991b1b;">❌ 不对。</span> ' + answer.explain;
+  }
+}
+
+// ===== Init =====
+buildViz();
+buildQuiz();
+updateProgress();
+</script>
+</body>
+</html>

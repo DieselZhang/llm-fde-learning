@@ -15,10 +15,12 @@
 ### 1. Prefill 与 Decode（1h）
 
 **Prefill 阶段**：处理完整的输入 prompt，并行计算所有 token 的 KV Cache
+
 - 计算密集型（Compute-bound）：需要大量矩阵乘法
 - 一次性处理整个序列，GPU 利用率高
 
 **Decode 阶段**：逐 token 生成输出
+
 - 内存密集型（Memory-bound）：主要瓶颈在 KV Cache 的读取
 - 每步只生成 1 个新 token，GPU 利用率低
 
@@ -27,16 +29,19 @@
 ### 2. KV Cache 详解（1h）
 
 **为什么需要 KV Cache？**
+
 - Self-Attention 中每个 token 都需要与之前所有 token 做 attention
 - 不缓存的话每一步都要重新计算，复杂度 O(n²)
 - 用 KV Cache 后变成 O(n)
 
 **显存占用公式**：
+
 ```
 M = 2 × (num_layers) × (num_heads) × (d_head) × (seq_len) × 2 × precision_bytes
 ```
+
 - `2` = K cache + V cache
-- 对于 70B 模型，batch=1，seq_len=4096：约 **3.2GB** KV Cache
+- 对于 70B 模型，batch=1，seq\_len=4096：约 **3.2GB** KV Cache
 - 对于 1024 并发请求：超过 **3.2TB**！
 
 > 💡 这就是为什么需要 PagedAttention：KV Cache 是推理服务最大的显存开销
@@ -45,16 +50,17 @@ M = 2 × (num_layers) × (num_heads) × (d_head) × (seq_len) × 2 × precision_
 
 **核心思想**：借鉴操作系统虚拟内存的分页机制
 
-| 对比项 | 传统实现 | PagedAttention |
-|--------|---------|---------------|
-| KV Cache 管理 | 连续显存分配 | 分页（block）分配 |
-| 内部碎片 | 严重（预留最大长度） | 仅最后一块可能有碎片 |
-| 内存共享 | 不支持 | 支持 beam search、并行采样共享 |
-| 显存利用率 | 20%-40% | 90%+ |
+| 对比项         | 传统实现       | PagedAttention        |
+| ----------- | ---------- | --------------------- |
+| KV Cache 管理 | 连续显存分配     | 分页（block）分配           |
+| 内部碎片        | 严重（预留最大长度） | 仅最后一块可能有碎片            |
+| 内存共享        | 不支持        | 支持 beam search、并行采样共享 |
+| 显存利用率       | 20%-40%    | 90%+                  |
 
-**关键论文**：https://arxiv.org/abs/2309.06180
+**关键论文**：<https://arxiv.org/abs/2309.06180>
 
 **中文解读资源**：
+
 - [vLLM 原理深度解析 (CSDN)](https://blog.csdn.net/m0_38097087/article/details/149334128)
 - [图解 vLLM 源码解析 1 - 整体架构](https://www.cvmart.net/community/detail/8596)
 - [图解 vLLM 源码解析 2 - Scheduler](https://www.cvmart.net/community/detail/8617)
@@ -62,16 +68,19 @@ M = 2 × (num_layers) × (num_heads) × (d_head) × (seq_len) × 2 × precision_
 ### 4. Continuous Batching（1h）
 
 **传统 Static Batching 的问题**：
+
 - 所有请求必须同时开始、同时结束
 - 短的请求要等长的请求完成
 - 显著降低吞吐
 
 **Continuous Batching 的改进**：
+
 - 请求粒度：可以在任意时刻加入/离开 batch
 - Iteration-level scheduling：每步迭代决定哪些请求参与
 - 效果：吞吐量可提升 10-20x
 
 **配合 PagedAttention 的调度流程**：
+
 ```
 Request → Scheduler (决定谁加入) → Block Manager (分配显存) → Model Runner (实际计算)
                                                         ↑
@@ -79,6 +88,7 @@ Request → Scheduler (决定谁加入) → Block Manager (分配显存) → Mod
 ```
 
 ### 📺 推荐视频资源
+
 - [vLLM 源码解析 PagedAttention 原理详解 (B站)](https://www.bilibili.com/video/BV1YfW4eDE6V/)
 
 ## 🛠️ 实操练习（3h）
@@ -239,6 +249,7 @@ print(f'Output: {tokenizer.decode(generated)}')
 ## 📝 学习日志
 
 在 `daily-logs/day-01.md` 中记录：
+
 1. 上述三个练习的输出结果
 2. 你理解的 PagedAttention 相比传统实现的核心优势
 3. Continuous Batching 在哪些场景下提升最大？
@@ -257,4 +268,4 @@ print(f'Output: {tokenizer.decode(generated)}')
 A: Decode 每步只计算 1 个 token 的 attention，计算量很小。但需要读取所有之前 token 的 KV Cache，这部分访存量大。所以瓶颈在 HBM 带宽，不在计算。
 
 **Q: PagedAttention 的 block size 如何选择？**
-A: vLLM 默认 block_size=16。太小增加管理开销，太大增加内部碎片。16 是经验平衡值。
+A: vLLM 默认 block\_size=16。太小增加管理开销，太大增加内部碎片。16 是经验平衡值。
