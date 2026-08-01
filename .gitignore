@@ -18,3 +18,8 @@ env/
 # ===== 运行产物 =====
 gpu-reports/
 *.html.tmp
+.playwright-mcp/
+
+# ===== 小红书发布素材（含截图）=====
+*.png
+xiaohongshu-cover.html
