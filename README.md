@@ -60,6 +60,7 @@ llm-fde-learning/
 │   ├── continuous-batching-implementation.md
 │   ├── cuda-graph-and-ray.md
 │   ├── tp-vs-pp-why-tp-first.md
+│   ├── batch-invariance-deterministic-output.md  # 确定性输出与Batch Invariance
 │   ├── glm52-b300-vllm-pd-deploy.md      # GLM-5.2 B300 生产部署案例
 │   ├── glm52-production-concepts.md      # GLM-5.2 核心概念详解（MoE/DSA/MTP/EP）
 │   └── gpu-rental-practice-plan.md       # 自费 GPU 租用实践方案
@@ -144,6 +145,7 @@ bash 03-vllm-benchmark.sh
 | [sglang-interactive-learning.html](foundations/sglang-interactive-learning.html) | SGLang 交互式学习：10 模块 + 自测题 |
 | [kv-cache-deep-dive.md](foundations/kv-cache-deep-dive.md) | KV Cache 从底层原理到生产策略 |
 | [tp-vs-pp-why-tp-first.md](foundations/tp-vs-pp-why-tp-first.md) | 为什么推荐 TP 优先于 PP |
+| [batch-invariance-deterministic-output.md](foundations/batch-invariance-deterministic-output.md) | 大模型确定性输出：浮点非结合律与 Batch Invariance |
 | [glm52-b300-vllm-pd-deploy.md](foundations/glm52-b300-vllm-pd-deploy.md) | 真实生产案例：GLM-5.2 + B300 + P/D 分离部署优化 |
 | [glm52-production-concepts.md](foundations/glm52-production-concepts.md) | 生产级核心概念详解：MoE/DSA/MTP/EP/推测解码 |
 
