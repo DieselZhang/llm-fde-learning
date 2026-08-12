@@ -51,20 +51,31 @@ llm-fde-learning/
 ├── LICENSE                          # CC BY 4.0
 ├── CONTRIBUTING.md                  # 贡献指南 / Contribution guide
 │
-├── foundations/                     # 📚 基础学习资料（理论 + 交互式页面）
-│   ├── vllm-interactive-learning.html    # vLLM 交互式学习页面
-│   ├── sglang-interactive-learning.html  # SGLang 交互式学习页面
-│   ├── kv-cache-deep-dive.md             # KV Cache 深度解析
-│   ├── vllm-deployment-guide.md          # vLLM 逐行部署指南
-│   ├── sglang-deployment-guide.md        # SGLang 逐行部署指南
-│   ├── continuous-batching-implementation.md
-│   ├── cuda-graph-and-ray.md
-│   ├── tp-vs-pp-why-tp-first.md
-│   ├── qwen35-gb200-pd-disagg.md         # Qwen3.5 GB200 PD分离部署
-│   ├── batch-invariance-deterministic-output.md  # 确定性输出与Batch Invariance
-│   ├── glm52-b300-vllm-pd-deploy.md      # GLM-5.2 B300 生产部署案例
-│   ├── glm52-production-concepts.md      # GLM-5.2 核心概念详解（MoE/DSA/MTP/EP）
-│   └── gpu-rental-practice-plan.md       # 自费 GPU 租用实践方案
+├── foundations/                     # 📚 基础学习资料（按类型分子目录）
+│   ├── interactive/                 #   交互式学习页面（HTML）
+│   │   ├── vllm-interactive-learning.html   # vLLM 交互式学习
+│   │   └── sglang-interactive-learning.html # SGLang 交互式学习
+│   ├── guides/                      #   部署指南
+│   │   ├── vllm-deployment-guide.md        # vLLM 逐行部署指南
+│   │   └── sglang-deployment-guide.md      # SGLang 逐行部署指南
+│   └── notes/                       #   深度概念笔记
+│       ├── kv-cache-deep-dive.md            # KV Cache 深度解析
+│       ├── tp-vs-pp-why-tp-first.md         # 为什么推荐 TP 优先于 PP
+│       ├── continuous-batching-implementation.md
+│       ├── cuda-graph-and-ray.md
+│       ├── gpu-rental-practice-plan.md      # 自费 GPU 租用实践方案
+│       ├── glm52-b300-vllm-pd-deploy.md     # GLM-5.2 B300 生产部署案例
+│       ├── glm52-production-concepts.md     # GLM-5.2 核心概念详解
+│       ├── qwen35-gb200-pd-disagg.md        # Qwen3.5 GB200 PD分离部署
+│       └── batch-invariance-deterministic-output.md  # 确定性输出
+│
+├── learnings/                       # 🎓 源码项目学习产出（repo-mastery）
+│   ├── README.md                    #   目录说明与组织约定
+│   ├── vllm/                        #   （示例）vLLM 源码学习
+│   │   ├── course.md                #   Markdown 课程
+│   │   └── course.html              #   HTML 课程
+│   ├── sglang/                      #   （示例）SGLang 源码学习
+│   └── flash-attention/             #   后续新增项目
 │
 ├── practices/                       # 🛠️ 动手实践（学习文档 + 脚本）
 │   ├── docs/                        # 7 天学习文档
@@ -109,10 +120,10 @@ llm-fde-learning/
 
 ```bash
 # 打开 vLLM 交互式学习
-open foundations/vllm-interactive-learning.html
+open foundations/interactive/vllm-interactive-learning.html
 
 # 打开 SGLang 交互式学习
-open foundations/sglang-interactive-learning.html
+open foundations/interactive/sglang-interactive-learning.html
 ```
 
 ### 方式二：动手实践（有 GPU）
@@ -134,7 +145,7 @@ curl http://localhost:8000/v1/models
 bash 03-vllm-benchmark.sh
 ```
 
-> 💡 没有 GPU？参考 `foundations/gpu-rental-practice-plan.md`，有完整的自费租用实践方案（约 ¥50 可完成全流程）。
+> 💡 没有 GPU？参考 `foundations/notes/gpu-rental-practice-plan.md`，有完整的自费租用实践方案（约 ¥50 可完成全流程）。
 
 ## 📚 各阶段学习资源 / Resources by Stage
 
@@ -142,14 +153,14 @@ bash 03-vllm-benchmark.sh
 
 | 资源 | 说明 |
 |------|------|
-| [vllm-interactive-learning.html](foundations/vllm-interactive-learning.html) | vLLM 交互式学习：10 模块 + 自测题 |
-| [sglang-interactive-learning.html](foundations/sglang-interactive-learning.html) | SGLang 交互式学习：10 模块 + 自测题 |
-| [kv-cache-deep-dive.md](foundations/kv-cache-deep-dive.md) | KV Cache 从底层原理到生产策略 |
-| [tp-vs-pp-why-tp-first.md](foundations/tp-vs-pp-why-tp-first.md) | 为什么推荐 TP 优先于 PP |
-| [qwen35-gb200-pd-disagg.md](foundations/qwen35-gb200-pd-disagg.md) | Qwen3.5 混合注意力架构的 GB200 PD 分离部署（25K TPS） |
-| [batch-invariance-deterministic-output.md](foundations/batch-invariance-deterministic-output.md) | 大模型确定性输出：浮点非结合律与 Batch Invariance |
-| [glm52-b300-vllm-pd-deploy.md](foundations/glm52-b300-vllm-pd-deploy.md) | 真实生产案例：GLM-5.2 + B300 + P/D 分离部署优化 |
-| [glm52-production-concepts.md](foundations/glm52-production-concepts.md) | 生产级核心概念详解：MoE/DSA/MTP/EP/推测解码 |
+| [vllm-interactive-learning.html](foundations/interactive/vllm-interactive-learning.html) | vLLM 交互式学习：10 模块 + 自测题 |
+| [sglang-interactive-learning.html](foundations/interactive/sglang-interactive-learning.html) | SGLang 交互式学习：10 模块 + 自测题 |
+| [kv-cache-deep-dive.md](foundations/notes/kv-cache-deep-dive.md) | KV Cache 从底层原理到生产策略 |
+| [tp-vs-pp-why-tp-first.md](foundations/notes/tp-vs-pp-why-tp-first.md) | 为什么推荐 TP 优先于 PP |
+| [qwen35-gb200-pd-disagg.md](foundations/notes/qwen35-gb200-pd-disagg.md) | Qwen3.5 混合注意力架构的 GB200 PD 分离部署（25K TPS） |
+| [batch-invariance-deterministic-output.md](foundations/notes/batch-invariance-deterministic-output.md) | 大模型确定性输出：浮点非结合律与 Batch Invariance |
+| [glm52-b300-vllm-pd-deploy.md](foundations/notes/glm52-b300-vllm-pd-deploy.md) | 真实生产案例：GLM-5.2 + B300 + P/D 分离部署优化 |
+| [glm52-production-concepts.md](foundations/notes/glm52-production-concepts.md) | 生产级核心概念详解：MoE/DSA/MTP/EP/推测解码 |
 
 ### Stage 2: 动手实践 Practices
 
@@ -167,8 +178,8 @@ bash 03-vllm-benchmark.sh
 
 | 资源 | 说明 |
 |------|------|
-| [vllm-deployment-guide.md](foundations/vllm-deployment-guide.md) | vLLM 单机/分布式/PD分离逐行命令 + NIXL/MoonCake |
-| [sglang-deployment-guide.md](foundations/sglang-deployment-guide.md) | SGLang 单机/Router/PD分离逐行命令 |
+| [vllm-deployment-guide.md](foundations/guides/vllm-deployment-guide.md) | vLLM 单机/分布式/PD分离逐行命令 + NIXL/MoonCake |
+| [sglang-deployment-guide.md](foundations/guides/sglang-deployment-guide.md) | SGLang 单机/Router/PD分离逐行命令 |
 | [practices/references/faq-troubleshooting.md](practices/references/faq-troubleshooting.md) | 15 个高频故障排查 |
 | [reports/template.md](reports/template.md) | Benchmark 性能报告模板 |
 
