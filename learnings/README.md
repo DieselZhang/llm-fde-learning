@@ -27,4 +27,4 @@ learnings/
 
 | 项目 | 状态 | 说明 |
 |------|------|------|
-| （暂无） | - | 使用 repo-mastery 学习后补充 |
+| [pi-agent](pi-agent/course.md) | ✅ 已整理 | Pi Agent 源码精读笔记（10 章，Agent SDK 核心机制） |

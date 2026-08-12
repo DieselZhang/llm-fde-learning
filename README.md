@@ -71,9 +71,9 @@ llm-fde-learning/
 │
 ├── learnings/                       # 🎓 源码项目学习产出（repo-mastery）
 │   ├── README.md                    #   目录说明与组织约定
+│   ├── pi-agent/                    #   Pi Agent 源码精读
+│   │   └── course.md                #   10 章源码精读笔记（Agent SDK）
 │   ├── vllm/                        #   （示例）vLLM 源码学习
-│   │   ├── course.md                #   Markdown 课程
-│   │   └── course.html              #   HTML 课程
 │   ├── sglang/                      #   （示例）SGLang 源码学习
 │   └── flash-attention/             #   后续新增项目
 │
