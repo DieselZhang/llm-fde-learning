@@ -1,0 +1,88 @@
+<section class="module" id="module-01">
+  <div class="module-content">
+    <div class="module-header">
+      <span class="module-number">01</span>
+      <h2 class="module-title">定位与生态</h2>
+      <p class="module-subtitle">mem0 是什么、vs 谁、何时选</p>
+    </div>
+    <div class="screen"><h2>Chapter 1 — 定位与生态（教材式）</h2>
+<blockquote>学习方式：跟随材料逐节学习 → 课后答疑 → 课后检验 → 章节完成（模块级闸门）<br>材料生成: 2026-08-12 | 章节状态: teaching</blockquote>
+<h3>0. 章节导言</h3>
+<p>为什么先学定位？因为 mem0 所有的设计决策（ADD-only、实体链接、多信号融合）都从<strong>它想当什么、不想当什么</strong>出发。先建立"它在生态里的位置"，后面的每个实现细节就有了锚点——你会反复用一句话校准理解：<strong>mem0 回答"哪些持久事实对当前用户最相关"，向量库回答"哪段文本最像"</strong>。</p>
+<p>这一章解决三件事：mem0 是什么（kp01-01）、它与最容易混淆的三个方案差在哪（kp01-02）、什么时候该选它而非 Zep/Letta/LangMem（kp01-03）。</p>
+<hr>
+<h3>1. mem0 是什么与生态位（kp01-01）</h3>
+<h4>1.1 学习目标</h4>
+<p>学完你能回答：mem0 解决什么问题、用什么核心机制解决、它明确拒绝做什么。</p>
+<h4>1.2 讲解 + 源码走读</h4>
+<p><strong>痛点</strong>：LLM 本身无状态。跨会话的个性化——记住用户偏好、上次的决定、长期的约束——需要把对话变成<strong>可检索的持久记忆</strong>。</p>
+<p><strong>核心机制（一句话）</strong>：白盒记忆——<strong>写路径</strong>用 LLM 把对话蒸馏成自包含事实（而非存原始对话块），<strong>读路径</strong>做语义 + 关键词 + 实体多信号融合召回，并按 <code>user_id / agent_id / run_id</code> 隔离。</p>
+<p><strong>生态位（它站在哪）</strong>：一条光谱上——</p>
+<pre><code>裸向量库 ───────────── mem0 ──────────── 完整 Agent 框架
+只做文本相似           事实抽取+召回        Letta/LangMem
+无写路径逻辑            +生命周期            Agent 自治记忆</code></pre>
+<p>mem0 不是向量库（那是"怎么存"的实现），也不是 Agent 框架（那是"怎么用记忆思考"）。它占据<strong>事实记忆层</strong>——最容易被误读成"RAG"或"向量库封装"，但它的设计核心在<strong>存什么</strong>（LLM 抽取）和<strong>怎么取</strong>（多信号融合 + 隔离 + 生命周期）。</p>
+<p><strong>证据</strong>：<code>mem0/configs/prompts.py:468</code> 的 <code>ADDITIVE_EXTRACTION_PROMPT</code> 强制 LLM 输出 <code>{"memory":[{id,text,attributed_to,linked_memory_ids}]}</code>——这就是"把对话变成事实"的契约；<code>mem0/memory/main.py:906-1196</code> 的 V3 管线把一次对话蒸馏成若干持久事实。</p>
+<h4>1.3 小结</h4>
+<ul><li>mem0 解决 LLM 无状态 → 跨会话个性化需要持久可检索记忆。</li><li>核心是<strong>白盒记忆</strong>：写路径蒸馏事实，读路径多信号召回，非存原始对话块。</li><li>生态位：事实记忆层，介于裸向量库与完整 Agent 框架之间。</li><li>误区红线：它的问题不是"记忆存哪里"（向量库只是实现），而是"存什么 + 怎么取"。</li></ul>
+<h4>1.4 课后思考题</h4>
+<ul><li><strong>kp01-01（design）</strong>：如果面试官说"mem0 不就是把记忆存到向量库吗"，你如何用一句话纠正，并指出它的设计核心实际在写路径的哪个决策上？</li></ul>
+<hr>
+<h3>2. 与裸向量库/RAG/Claude Code auto memory 的本质差异（kp01-02）</h3>
+<h4>2.1 学习目标</h4>
+<p>学完你能：面对"mem0 和 RAG 有什么区别""和 Claude Code 的记忆有什么区别"这类问题，给出<strong>本质维度</strong>的对比而非罗列功能。</p>
+<h4>2.2 讲解 + 源码走读</h4>
+<p><strong>三个对比对象，三个本质维度</strong>：</p>
+<div class="table-wrap"><table>
+<tr><th>维度</th><th>裸向量库/自建 RAG</th><th>Claude Code auto memory</th><th>mem0</th></tr>
+<tr><th>---</th><th>---</th><th>---</th><th>---</th></tr>
+<tr><th>写路径</th><th>存原始 chunk，无抽取</th><th>Claude 写自然语言 Markdown 笔记</th><th><strong>LLM 蒸馏成持久事实</strong>（<code>main.py:930-959</code>）</th></tr>
+<tr><th>检索</th><th>纯语义相似</th><th>MEMORY.md 索引 + 模型上下文判断（<strong>无向量检索</strong>）</th><th>语义 + BM25 + 实体融合（<code>scoring.py:60-139</code>）</th></tr>
+<tr><th>作用域</th><th>自己写</th><th>按项目 git 根</th><th><code>user/agent/run</code> 内置（<code>main.py:143</code>）</th></tr>
+<tr><th>生命周期</th><th>自己写</th><th>/memory 编辑 + Auto Dream</th><th>update/delete/history 完整 API</th></tr>
+</table></div>
+<p><strong>vs 裸向量库 / RAG</strong>：RAG 面向<strong>外部知识</strong>（文档 chunk），mem0 面向<strong>用户事实</strong>（抽取条目）。两者读路径都是"检索增强循环"，但 mem0 多了 RAG <strong>没有的写路径</strong>——怎么提炼该记的东西，以及生命周期管理。裸向量库只回答"哪段文本最像"，mem0 回答"哪些事实对当前用户最相关"。</p>
+<p><strong>vs Claude Code auto memory</strong>：记忆<strong>形态</strong>决定架构。Claude Code 的记忆是<strong>稀疏、精确、人可读的"项目笔记"</strong>——量小、要求精确、上下文判断足够，引入向量语义召回反而有害（过拟合噪声）。mem0 是<strong>海量、模糊、机器检索的"事实库"</strong>——量大、召回需求模糊、必须打分排序。<strong>Pi 是 mem0 的用户（用 <code>@mem0/pi-agent-plugin</code>），不是对比项</strong>——Pi 是通用助手需要事实型记忆，所以直接集成 mem0。</p>
+<h4>2.3 小结</h4>
+<ul><li>vs RAG：外部知识 vs 用户事实；读路径同，写路径 mem0 独有。</li><li>vs 裸向量库：存什么（抽取 vs chunk）+ 怎么取（多信号 vs 纯语义）+ 生命周期。</li><li>vs Claude Code：记忆形态决定架构——稀疏精确笔记 vs 海量模糊事实库。</li><li>记忆形态 → 架构是这条知识的可迁移结论（选型时先问形态）。</li></ul>
+<h4>2.4 课后思考题</h4>
+<ul><li><strong>kp01-02（design）</strong>：为什么 Claude Code 的 auto memory <strong>不做</strong>向量检索而 mem0 做？如果把 mem0 的思路强套到 Claude Code 的记忆场景，会在哪里变糟？</li></ul>
+<hr>
+<h3>3. 与 Zep/Letta/LangMem 的选型判据（kp01-03）</h3>
+<h4>3.1 学习目标</h4>
+<p>学完你能给出<strong>可迁移的决策规则</strong>：什么条件下选 mem0，什么条件下选 Zep/Letta/LangMem——而不是背一个 feature 列表。</p>
+<h4>3.2 讲解 + 源码走读</h4>
+<p><strong>生态事实</strong>（<code>[web]</code> 2026-08-12，详见 <code>positioning.md</code>）：</p>
+<div class="table-wrap"><table>
+<tr><th>方案</th><th>核心动作</th><th>最强点</th><th>代价</th></tr>
+<tr><th>---</th><th>---</th><th>---</th><th>---</th></tr>
+<tr><th><strong>mem0</strong></th><th>LLM 抽取持久事实</th><th>生态最大（~51.8k stars）、上手最快、OSS 自托管自由</th><th>时间推理弱（LongMemEval temporal 49%）；graph 付费墙</th></tr>
+<tr><th><strong>Zep</strong></th><th>时间知识图谱（bi-temporal）</th><th>时效/矛盾消解最强（temporal 63.8%）</th><th>重度托管服务（CE 2025 已弃）、贵</th></tr>
+<tr><th><strong>Letta</strong></th><th>Agent 自编辑分层记忆</th><th>长时自治 Agent（LoCoMo 74.0%）</th><th>是框架不是 drop-in API、重</th></tr>
+<tr><th><strong>LangMem</strong></th><th>LangGraph 原生 store</th><th>零新依赖（在 LangChain 生态内）</th><th>绑死 LangGraph、LoCoMo 最低 58.1%</th></tr>
+</table></div>
+<p><strong>可迁移决策规则</strong>（这是 kp01-03 的"能力"所在）：</p>
+<ol><li><strong>要不要在写路径做 LLM 蒸馏？</strong> 不要 → 裸向量库 + 自写 RAG 足够。</li><li>要蒸馏 + <strong>标准事实场景</strong> → <strong>mem0</strong>（最省事、生态最全）。</li><li>要蒸馏 + <strong>时间/矛盾消解</strong>（"什么时候变的"）→ <strong>Zep</strong>。</li><li>要蒸馏 + <strong>Agent 自治长时运行</strong> → <strong>Letta</strong>。</li><li>已扎根 LangGraph → <strong>LangMem</strong>。</li><li><strong>数据不能出境</strong> → mem0 OSS 自托管 + 本地 LLM（18 LLM / 25 向量库，<code>factory.py</code>）。</li></ol>
+<p><strong>判据来源锚点</strong>：<code>positioning.md</code> 的"When to pick it"行（<code>[web]</code> + <code>[src]</code> 双证）。</p>
+<h4>3.3 小结</h4>
+<ul><li>选型核心判据：<strong>要不要在写路径做 LLM 蒸馏</strong> + 场景是否要时间推理。</li><li>mem0 的差异化 = 事实抽取 + 最大生态 + OSS 自托管自由；代价 = 时间推理弱。</li><li>Zep 赢在时效、Letta 赢在自治、LangMem 赢在 LangGraph 零依赖——各自换走了"简单 drop-in"。</li></ul>
+<h4>3.4 课后思考题</h4>
+<ul><li><strong>kp01-03（design）</strong>：你的产品要给客服助手做长期用户画像记忆，要求数据不出域、且要处理"用户改主意"（偏好变更）——按决策规则，mem0、Zep、自建 RAG 里选谁？理由逐条列出（引用矩阵行）。</li></ul>
+<hr>
+<h3>章节总结</h3>
+<p><strong>本章心智模型</strong>：mem0 是站在光谱中间的事实记忆层——写路径蒸馏、读路径多信号召回、内置隔离与生命周期。对比任何方案时先问两个维度：<strong>存什么</strong>（chunk vs 事实 vs 笔记）与<strong>怎么取</strong>（纯语义 vs 多信号 vs 索引+上下文）。选型时最核心判据是<strong>写路径要不要 LLM 蒸馏</strong> + <strong>场景要不要时间推理</strong>。</p>
+<p><strong>关键 file:line 索引</strong>：<code>main.py:930-959</code>（LLM 抽取）、<code>scoring.py:60-139</code>（融合）、<code>main.py:143</code>（作用域剥离）、<code>factory.py:42</code>（Provider 注册）。</p>
+<p><strong>与整体架构的钩子</strong>：本章"白盒记忆"的框架，正是 m04/m05 的 add/search 数据流要展开的两半；m06 的 ADD-only 哲学是"写路径只蒸馏不裁决"的展开。</p>
+<hr>
+<h3>Cheatsheet（memory 型，参考用）</h3>
+<pre><code># mem0 核心概念速记
+mem0 = 写路径LLM蒸馏事实 + 读路径多信号召回 + user/agent/run隔离 + 生命周期
+vs 向量库: 存什么不同（事实 vs chunk）+ 怎么取不同（多信号 vs 纯语义）
+vs RAG:    外部知识 vs 用户事实；写路径是 mem0 独有
+vs Claude Code: 记忆形态决定架构（稀疏笔记 vs 海量事实库）
+vs Zep:    时间推理（Zep 强） / vs Letta: 自治（Letta 强） / vs LangMem: LangGraph生态
+选型判据: 要不要写路径LLM蒸馏 + 要不要时间推理</code></pre>
+<h3>课后检验记录</h3>
+<blockquote>（课后阶段追加）kp01-01/02/03 → 判定结果 + 引擎返回。</blockquote></div>
+  </div>
+</section>

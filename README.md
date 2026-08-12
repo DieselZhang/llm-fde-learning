@@ -73,6 +73,10 @@ llm-fde-learning/
 │   ├── README.md                    #   目录说明与组织约定
 │   ├── pi-agent/                    #   Pi Agent 源码精读
 │   │   └── course.md                #   10 章源码精读笔记（Agent SDK）
+│   ├── mem0/                        #   mem0 记忆层源码课程
+│   │   ├── course.md                #   主课程：7 模块 / 23 知识点
+│   │   ├── course.html              #   HTML 版课程入口
+│   │   └── .learning/               #   完整学习状态（章节/进度/复习队列）
 │   ├── vllm/                        #   （示例）vLLM 源码学习
 │   ├── sglang/                      #   （示例）SGLang 源码学习
 │   └── flash-attention/             #   后续新增项目

@@ -1,0 +1,753 @@
+{
+  "repo": "mem0ai/mem0",
+  "flow_phase": "learning",
+  "current_module_id": "m07",
+  "modules": [
+    {
+      "id": "m01",
+      "name": "定位与生态",
+      "order": 1,
+      "pass_threshold": 0.7,
+      "knowledge_points": [
+        {
+          "id": "kp01-01",
+          "name": "mem0 是什么与生态位",
+          "type": "design"
+        },
+        {
+          "id": "kp01-02",
+          "name": "与裸向量库/RAG/Claude Code auto memory 的本质差异",
+          "type": "design"
+        },
+        {
+          "id": "kp01-03",
+          "name": "与 Zep/Letta/LangMem 的选型判据",
+          "type": "design"
+        }
+      ]
+    },
+    {
+      "id": "m02",
+      "name": "构建与环境",
+      "order": 2,
+      "pass_threshold": 0.7,
+      "knowledge_points": [
+        {
+          "id": "kp02-01",
+          "name": "源码构建与运行 mem0 SDK",
+          "type": "procedure"
+        },
+        {
+          "id": "kp02-02",
+          "name": "MemoryConfig 配置与 Provider 工厂注册",
+          "type": "procedure"
+        },
+        {
+          "id": "kp02-03",
+          "name": "核心 API 用法（add/search/get/update/delete/history）",
+          "type": "procedure"
+        }
+      ]
+    },
+    {
+      "id": "m03",
+      "name": "总体架构心智模型",
+      "order": 3,
+      "pass_threshold": 0.7,
+      "knowledge_points": [
+        {
+          "id": "kp03-01",
+          "name": "分层架构与依赖方向（入口/配置/Provider/存储）",
+          "type": "concept"
+        },
+        {
+          "id": "kp03-02",
+          "name": "三层存储模型（向量库/SQLite messages/SQLite history）",
+          "type": "concept"
+        },
+        {
+          "id": "kp03-03",
+          "name": "Memory/AsyncMemory/MemoryClient 的关系与选择",
+          "type": "concept"
+        }
+      ]
+    },
+    {
+      "id": "m04",
+      "name": "写入管线 add()",
+      "order": 4,
+      "pass_threshold": 0.7,
+      "knowledge_points": [
+        {
+          "id": "kp04-01",
+          "name": "V3 add() 八阶段数据流总览",
+          "type": "concept"
+        },
+        {
+          "id": "kp04-02",
+          "name": "单次 LLM 抽取 + UUID 重映射防幻觉",
+          "type": "concept"
+        },
+        {
+          "id": "kp04-03",
+          "name": "为什么 MD5 精确去重而非语义去重",
+          "type": "design"
+        },
+        {
+          "id": "kp04-04",
+          "name": "为什么用实体链接替代图数据库",
+          "type": "design"
+        }
+      ]
+    },
+    {
+      "id": "m05",
+      "name": "检索管线 search()",
+      "order": 5,
+      "pass_threshold": 0.7,
+      "knowledge_points": [
+        {
+          "id": "kp05-01",
+          "name": "search() 检索数据流（over-fetch→BM25→实体→融合）",
+          "type": "concept"
+        },
+        {
+          "id": "kp05-02",
+          "name": "加性融合打分公式与 threshold 门控",
+          "type": "concept"
+        },
+        {
+          "id": "kp05-03",
+          "name": "为什么是加性融合而非 RRF",
+          "type": "design"
+        },
+        {
+          "id": "kp05-04",
+          "name": "实体加分机制与 explain 可解释性",
+          "type": "design"
+        }
+      ]
+    },
+    {
+      "id": "m06",
+      "name": "设计哲学与权衡",
+      "order": 6,
+      "pass_threshold": 0.7,
+      "knowledge_points": [
+        {
+          "id": "kp06-01",
+          "name": "为什么 ADD-only（反直觉核心）",
+          "type": "design"
+        },
+        {
+          "id": "kp06-02",
+          "name": "ADD-only 的代价与边界（矛盾事实/无时间衰减/库膨胀）",
+          "type": "design"
+        },
+        {
+          "id": "kp06-03",
+          "name": "平台 vs OSS 的功能分界（temporal scoring/Dream/图 memory）",
+          "type": "design"
+        },
+        {
+          "id": "kp06-04",
+          "name": "隐私/成本/合规边界（数据出境/LLM token 成本）",
+          "type": "design"
+        }
+      ]
+    },
+    {
+      "id": "m07",
+      "name": "动手实验与决策链",
+      "order": 7,
+      "pass_threshold": 0.7,
+      "knowledge_points": [
+        {
+          "id": "kp07-01",
+          "name": "用 OSS 搭建可运行的 add/search demo",
+          "type": "procedure"
+        },
+        {
+          "id": "kp07-02",
+          "name": "自研 vs 集成 mem0 的决策链",
+          "type": "design"
+        }
+      ]
+    }
+  ],
+  "mastery_levels": {},
+  "qualitative_mastery": {},
+  "knowledge_types": {
+    "kp01-01": "design",
+    "kp01-02": "design",
+    "kp01-03": "design",
+    "kp02-01": "procedure",
+    "kp02-02": "procedure",
+    "kp02-03": "procedure",
+    "kp03-01": "concept",
+    "kp03-02": "concept",
+    "kp03-03": "concept",
+    "kp04-01": "concept",
+    "kp04-02": "concept",
+    "kp04-03": "design",
+    "kp04-04": "design",
+    "kp05-01": "concept",
+    "kp05-02": "concept",
+    "kp05-03": "design",
+    "kp05-04": "design",
+    "kp06-01": "design",
+    "kp06-02": "design",
+    "kp06-03": "design",
+    "kp06-04": "design",
+    "kp07-01": "procedure",
+    "kp07-02": "design"
+  },
+  "quiz_attempts": [],
+  "error_records": [],
+  "repetition_states": {
+    "kp01-01": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1787707386
+    },
+    "kp01-02": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1787707386
+    },
+    "kp01-03": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1787707386
+    },
+    "kp02-01": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1786756986
+    },
+    "kp02-02": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1786756986
+    },
+    "kp02-03": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1786756986
+    },
+    "kp03-01": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1786756986
+    },
+    "kp03-02": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1786756986
+    },
+    "kp03-03": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1786756986
+    },
+    "kp04-01": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1786756986
+    },
+    "kp04-02": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1786756986
+    },
+    "kp04-03": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1787707386
+    },
+    "kp04-04": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1787707386
+    },
+    "kp05-01": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1786756986
+    },
+    "kp05-02": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1786756986
+    },
+    "kp05-03": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1787707386
+    },
+    "kp05-04": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1787707386
+    },
+    "kp06-01": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1787707386
+    },
+    "kp06-02": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1787707386
+    },
+    "kp06-03": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1787707386
+    },
+    "kp06-04": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1787707386
+    },
+    "kp07-01": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1786756987
+    },
+    "kp07-02": {
+      "interval_index": 0,
+      "consecutive_correct": 0,
+      "consecutive_wrong": 0,
+      "difficulty": 0.5,
+      "stability": 1.0,
+      "next_review_at": 1787707387
+    }
+  },
+  "review_queue": [
+    {
+      "id": "review_kp01-01",
+      "knowledge_point_id": "kp01-01",
+      "knowledge_type": "design",
+      "due_at": 1787707386,
+      "priority": 5,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1787707386
+      }
+    },
+    {
+      "id": "review_kp01-02",
+      "knowledge_point_id": "kp01-02",
+      "knowledge_type": "design",
+      "due_at": 1787707386,
+      "priority": 5,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1787707386
+      }
+    },
+    {
+      "id": "review_kp01-03",
+      "knowledge_point_id": "kp01-03",
+      "knowledge_type": "design",
+      "due_at": 1787707386,
+      "priority": 5,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1787707386
+      }
+    },
+    {
+      "id": "review_kp02-01",
+      "knowledge_point_id": "kp02-01",
+      "knowledge_type": "procedure",
+      "due_at": 1786756986,
+      "priority": 4,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1786756986
+      }
+    },
+    {
+      "id": "review_kp02-02",
+      "knowledge_point_id": "kp02-02",
+      "knowledge_type": "procedure",
+      "due_at": 1786756986,
+      "priority": 4,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1786756986
+      }
+    },
+    {
+      "id": "review_kp02-03",
+      "knowledge_point_id": "kp02-03",
+      "knowledge_type": "procedure",
+      "due_at": 1786756986,
+      "priority": 4,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1786756986
+      }
+    },
+    {
+      "id": "review_kp03-01",
+      "knowledge_point_id": "kp03-01",
+      "knowledge_type": "concept",
+      "due_at": 1786756986,
+      "priority": 3,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1786756986
+      }
+    },
+    {
+      "id": "review_kp03-02",
+      "knowledge_point_id": "kp03-02",
+      "knowledge_type": "concept",
+      "due_at": 1786756986,
+      "priority": 3,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1786756986
+      }
+    },
+    {
+      "id": "review_kp03-03",
+      "knowledge_point_id": "kp03-03",
+      "knowledge_type": "concept",
+      "due_at": 1786756986,
+      "priority": 3,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1786756986
+      }
+    },
+    {
+      "id": "review_kp04-01",
+      "knowledge_point_id": "kp04-01",
+      "knowledge_type": "concept",
+      "due_at": 1786756986,
+      "priority": 3,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1786756986
+      }
+    },
+    {
+      "id": "review_kp04-02",
+      "knowledge_point_id": "kp04-02",
+      "knowledge_type": "concept",
+      "due_at": 1786756986,
+      "priority": 3,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1786756986
+      }
+    },
+    {
+      "id": "review_kp04-03",
+      "knowledge_point_id": "kp04-03",
+      "knowledge_type": "design",
+      "due_at": 1787707386,
+      "priority": 5,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1787707386
+      }
+    },
+    {
+      "id": "review_kp04-04",
+      "knowledge_point_id": "kp04-04",
+      "knowledge_type": "design",
+      "due_at": 1787707386,
+      "priority": 5,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1787707386
+      }
+    },
+    {
+      "id": "review_kp05-01",
+      "knowledge_point_id": "kp05-01",
+      "knowledge_type": "concept",
+      "due_at": 1786756986,
+      "priority": 3,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1786756986
+      }
+    },
+    {
+      "id": "review_kp05-02",
+      "knowledge_point_id": "kp05-02",
+      "knowledge_type": "concept",
+      "due_at": 1786756986,
+      "priority": 3,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1786756986
+      }
+    },
+    {
+      "id": "review_kp05-03",
+      "knowledge_point_id": "kp05-03",
+      "knowledge_type": "design",
+      "due_at": 1787707386,
+      "priority": 5,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1787707386
+      }
+    },
+    {
+      "id": "review_kp05-04",
+      "knowledge_point_id": "kp05-04",
+      "knowledge_type": "design",
+      "due_at": 1787707386,
+      "priority": 5,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1787707386
+      }
+    },
+    {
+      "id": "review_kp06-01",
+      "knowledge_point_id": "kp06-01",
+      "knowledge_type": "design",
+      "due_at": 1787707386,
+      "priority": 5,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1787707386
+      }
+    },
+    {
+      "id": "review_kp06-02",
+      "knowledge_point_id": "kp06-02",
+      "knowledge_type": "design",
+      "due_at": 1787707386,
+      "priority": 5,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1787707386
+      }
+    },
+    {
+      "id": "review_kp06-03",
+      "knowledge_point_id": "kp06-03",
+      "knowledge_type": "design",
+      "due_at": 1787707386,
+      "priority": 5,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1787707386
+      }
+    },
+    {
+      "id": "review_kp06-04",
+      "knowledge_point_id": "kp06-04",
+      "knowledge_type": "design",
+      "due_at": 1787707386,
+      "priority": 5,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1787707386
+      }
+    },
+    {
+      "id": "review_kp07-01",
+      "knowledge_point_id": "kp07-01",
+      "knowledge_type": "procedure",
+      "due_at": 1786756987,
+      "priority": 4,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1786756987
+      }
+    },
+    {
+      "id": "review_kp07-02",
+      "knowledge_point_id": "kp07-02",
+      "knowledge_type": "design",
+      "due_at": 1787707387,
+      "priority": 5,
+      "state": {
+        "interval_index": 0,
+        "consecutive_correct": 0,
+        "consecutive_wrong": 0,
+        "difficulty": 0.5,
+        "stability": 1.0,
+        "next_review_at": 1787707387
+      }
+    }
+  ],
+  "pending_question": null,
+  "chapter": null,
+  "chapter_covered_modules": [
+    "m01",
+    "m02",
+    "m03",
+    "m04",
+    "m05",
+    "m06",
+    "m07"
+  ],
+  "last_review_type": null,
+  "version": 1
+}
