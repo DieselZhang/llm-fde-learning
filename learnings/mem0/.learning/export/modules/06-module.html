@@ -1,0 +1,109 @@
+<section class="module" id="module-06">
+  <div class="module-content">
+    <div class="module-header">
+      <span class="module-number">06</span>
+      <h2 class="module-title">设计哲学与权衡</h2>
+      <p class="module-subtitle">ADD-only · 代价 · 平台分界</p>
+    </div>
+    <div class="screen"><h2>Chapter 6 — 设计哲学与权衡（教材式）</h2>
+<blockquote>学习方式：跟随材料逐节学习 → 课后答疑 → 课后检验 → 章节完成（模块级闸门）<br>材料生成: 2026-08-12 | 章节状态: teaching</blockquote>
+<h3>0. 章节导言</h3>
+<p>这是<strong>深水区</strong>。m04/m05 回答了"怎么实现"，这一章回答"<strong>为什么这么设计</strong>"——反直觉的地方往往藏着最有价值的决策。四个知识点：为什么 ADD-only（kp06-01）→ ADD-only 的代价与边界（kp06-02）→ 平台 vs OSS 分界（kp06-03）→ 隐私/成本/合规边界（kp06-04）。</p>
+<blockquote>学完这一章，你将能从"mem0 怎么跑"升级到"mem0 为什么这么跑，以及它的边界在哪"——这是面试和选型中最具区分度的能力。</blockquote>
+<hr>
+<h3>1. 为什么 ADD-only（kp06-01）</h3>
+<h4>1.1 学习目标</h4>
+<p>学完你能：解释 ADD-only 的动机（为什么写路径不裁决）、对比旧版设计的失败点。</p>
+<h4>1.2 讲解 + 源码走读</h4>
+<p><strong>核心主张</strong>：写路径只做<strong>单调累积</strong>（ADD），把"哪些记忆有效、哪些过期、哪些矛盾"的裁决权全部留给读路径反复打分。</p>
+<p><strong>为什么（旧版教训）</strong>：旧版 <code>extract + reconcile</code> 让 LLM 在<strong>信息不充分</strong>的状态下做一次性合并/删除判断——它只看到本次对话 + 少量旧记忆，却要决定"这条旧记忆该不该删"。<strong>错误在写入期被不可逆固化</strong>：一旦 LLM 误删一条有用记忆，它永远找不回来。且每次 add 两次调用（extract + reconcile），贵。</p>
+<p><strong>V3 的转变</strong>：</p>
+<pre><code>旧版: 写路径 = LLM抽取 + LLM合并/删除裁决   （两次LLM调用，错误不可逆）
+V3:   写路径 = LLM抽取(仅ADD)               （一次LLM调用，错误可逆）
+      裁决 → 读路径反复打分（哪个进上下文由 query 决定）</code></pre>
+<p><strong>哲学</strong>："<strong>memory is retrieval, not storage</strong>"——记忆的价值在检索时兑现，不在写入时拍板。<code>main.py:930-959</code> 的抽取 prompt 只输出要新增的事实，无 UPDATE/DELETE 决策。</p>
+<p><strong>代码证据</strong>：<code>add()</code> 里没有任何"根据旧记忆改写/删除"的调用；<code>update</code>/<code>delete</code> 是<strong>按 ID 的手动操作</strong>（<code>main.py:1805,1859</code>），不由 LLM 驱动。</p>
+<h4>1.3 小结</h4>
+<ul><li>ADD-only = 写路径只单调累积，裁决权移给读路径。</li><li>旧版痛点：写路径在信息不充分时做不可逆合并/删除，误删找不回 + 两次调用贵。</li><li>哲学："memory is retrieval, not storage"。</li></ul>
+<h4>1.4 课后思考题</h4>
+<ul><li><strong>kp06-01（design）</strong>：ADD-only 把"矛盾事实消解"从写路径挪走，换来的是哪个确定的收益？请用"不可逆性"解释。</li></ul>
+<hr>
+<h3>2. ADD-only 的代价与边界（kp06-02）</h3>
+<h4>2.1 学习目标</h4>
+<p>学完你能：诚实列出 ADD-only 的 4 个代价、说出哪些是 OSS 无法自行解决的。</p>
+<h4>2.2 讲解 + 源码走读</h4>
+<p><strong>代价清单</strong>（设计诚实性——面试加分项）：</p>
+<div class="table-wrap"><table>
+<tr><th>代价</th><th>表现</th><th>缓解手段</th></tr>
+<tr><th>---</th><th>---</th><th>---</th></tr>
+<tr><th><strong>无内置冲突消解</strong></th><th>矛盾事实并存（"喜欢 Rust"与"改喜欢 Go"都在库），OSS 无机制保证挑对</th><th>读路径靠分数排挤；平台有 temporal scoring + Dream 合并</th></tr>
+<tr><th><strong>无时间衰减</strong></th><th><code>reference_date</code> 在 OSS <code>search()</code> 直接抛错（<code>main.py:1422</code>）</th><th>平台有；OSS 需自建</th></tr>
+<tr><th><strong>库只增不减</strong></th><th>累积 + over-fetch 候选膨胀，检索成本上升</th><th>定期人工合并；平台 Dream 自动化</th></tr>
+<tr><th><strong>召回过时版本风险</strong></th><th>"改主意"后旧事实仍可能被召回</th><th>分数排挤 + 时间衰减（平台）</th></tr>
+</table></div>
+<p><strong>关键认识</strong>：这些不是 bug，是 ADD-only 的<strong>固有代价</strong>——换取"错误不在写路径固化"。诚实承认边界，比假装系统完美更有说服力（面试红线：不要伪装系统无缺）。</p>
+<p><strong>代码证据</strong>：<code>main.py:1411-1422</code> 明确 <code>reference_date (Any, optional): Platform-only temporal parameter. Not supported in OSS.</code> 并抛错。</p>
+<h4>2.3 小结</h4>
+<ul><li>四个代价：无冲突消解、无时间衰减、库只增不减、召回过时版本。</li><li>代价换取的是"写路径不固化错误"这个核心收益。</li><li>有些代价 OSS 无法自行解决（时间衰减），是平台的差异化空间。</li></ul>
+<h4>2.4 课后思考题</h4>
+<ul><li><strong>kp06-02（design）</strong>：用户"改主意"后，旧记忆仍然可被召回。请设计一个不破坏 ADD-only 的缓解方案（提示：时间戳 + 读路径过滤 vs 写路径合并，选哪个？）。</li></ul>
+<hr>
+<h3>3. 平台 vs OSS 的功能分界（kp06-03）</h3>
+<h4>3.1 学习目标</h4>
+<p>学完你能：说清 OSS 与平台各提供什么、哪些能力是平台独有、为什么。</p>
+<h4>3.2 讲解 + 源码走读</h4>
+<p><strong>分界总览</strong>：</p>
+<div class="table-wrap"><table>
+<tr><th>能力</th><th>OSS</th><th>Platform</th></tr>
+<tr><th>---</th><th>---</th><th>---</th></tr>
+<tr><th>纯 ADD-only 管线</th><th>✅</th><th>✅</th></tr>
+<tr><th><code>reference_date</code> / 时间衰减</th><th>❌（抛错 <code>main.py:1422</code>）</th><th>✅（temporal scoring）</th></tr>
+<tr><th><code>latest_only</code></th><th>❌</th><th>✅</th></tr>
+<tr><th>Dream 记忆合并</th><th>❌</th><th>✅（pi-agent-plugin 配置 <code>minHours:24 / minSessions:5 / minMemories:20</code>）</th></tr>
+<tr><th>图 memory（多跳关系）</th><th>❌（已移除 #6808）</th><th>✅（付费）</th></tr>
+<tr><th>托管运维</th><th>❌</th><th>✅</th></tr>
+</table></div>
+<p><strong>为什么这样分</strong>：</p>
+<ol><li><strong>复杂度归属</strong>：时间推理（bi-temporal）、图遍历、自动合并都是<strong>高复杂度</strong>能力——塞进 OSS 会大幅增加维护面与使用门槛。OSS 保持"轻 + 可自托管"，重能力进付费平台（商业逻辑 + 复杂度管理双重合理）。</li><li><strong>图 memory 移出 OSS 的教训</strong>：图 DB 运维贵、OSS 用户用不上；轻量实体链接（m04）覆盖主要价值，图推理留给平台（<code>#6808</code> 提交）。</li><li><strong>生态策略</strong>：OSS 是引流入口（上手快、可自托管），平台是变现与深度能力的所在地——两者是同一产品的两个出口。</li></ol>
+<h4>3.3 小结</h4>
+<ul><li>平台独有：时间衰减 / temporal scoring / <code>latest_only</code> / Dream 合并 / 图 memory。</li><li>分界逻辑：高复杂度能力进平台，OSS 保持轻量可自托管。</li><li>图 memory 已从 OSS 移除（#6808）——讲 OSS 架构时别提 Neo4j。</li></ul>
+<h4>3.4 课后思考题</h4>
+<ul><li><strong>kp06-03（design）</strong>：如果你维护一个 OSS 项目，什么条件下会把一个能力从 OSS 移进付费版？（提示：维护成本 + 用户覆盖面 + 商业合理性）</li></ul>
+<hr>
+<h3>4. 隐私/成本/合规边界（kp06-04）</h3>
+<h4>4.1 学习目标</h4>
+<p>学完你能：说出 mem0 的隐私模型、成本结构、以及选型时的合规考量。</p>
+<h4>4.2 讲解 + 源码走读</h4>
+<p><strong>隐私</strong>：</p>
+<ul><li><strong>数据要发给 LLM</strong>：抽取（<code>main.py:946-959</code>）与召回打分都依赖 LLM/embedding，文本会发送给 provider。</li><li><strong>缓解</strong>：OSS 自托管 + 本地 LLM（Ollama 等，18 个 provider）→ 数据不出域（<code>factory.py</code>）；这是 OSS 相对平台的核心卖点。</li><li><strong>写路径 PII 脱敏</strong>：平台有脱敏机制，OSS 需自建。</li></ul>
+<p><strong>成本</strong>：</p>
+<ul><li><strong>写路径是主要 LLM 成本</strong>：每次 add 一次抽取调用；<code>infer=False</code> 可完全跳过 LLM（直接存原文，牺牲抽取）。</li><li><strong>读路径是延迟敏感点</strong>：over-fetch（<code>main.py:1631</code>）+ 融合计算，<code>top_k</code> 与阈值决定裁剪；读频率远高于写，延迟更敏感。</li><li><strong>向量库/存储成本</strong>：库只增不减（ADD-only 代价），需定期合并控制规模。</li></ul>
+<p><strong>合规决策链</strong>：</p>
+<ol><li>数据能否出境？否 → OSS + 本地 LLM。</li><li>存储是否需自持？是 → OSS 自托管向量库（25 个选择）。</li><li>成本敏感？→ 控写频率 / <code>infer=False</code> / 本地模型。</li></ol>
+<h4>4.3 小结</h4>
+<ul><li>隐私：数据发 LLM 是常态；OSS + 本地 LLM = 数据不出域。</li><li>成本：写路径烧 LLM token，读路径重延迟；<code>infer=False</code> 是跳过 LLM 的开关。</li><li>合规决策链：数据出境？→ 存储自持？→ 成本敏感？层层收窄。</li></ul>
+<h4>4.4 课后思考题</h4>
+<ul><li><strong>kp06-04（design）</strong>：一个金融客服产品要长期记忆用户偏好，但合规要求数据不出内网。请用平台/OSS 分界 + 成本结构，给出完整架构选择与理由。</li></ul>
+<hr>
+<h3>章节总结</h3>
+<p><strong>本章心智模型</strong>：mem0 的全部设计都围绕一个核心取舍——<strong>写路径简单确定、读路径裁决</strong>（ADD-only）。这带来四个固有代价（冲突/时间/膨胀/过时），平台用 temporal scoring + Dream 补齐，OSS 靠"诚实承认 + 轻量自托管"立足。选型时先回答三个问题：要不要写路径蒸馏？数据出不出域？要不要时间推理？——答案指向 mem0 / Zep / 自建 RAG。</p>
+<p><strong>关键 file:line 索引</strong>：<code>main.py:906-1196</code>（ADD-only 管线）、<code>:1411-1422</code>（reference_date 拒绝）、<code>:1805,1859</code>（手动 update/delete）、<code>prompts.py:468</code>（抽取只 ADD）、<code>factory.py</code>（本地 LLM 能力）。</p>
+<p><strong>与整体架构的钩子</strong>：这一章把 m04（写路径）和 m05（读路径）串成一条哲学主线——"写单调累积、读反复裁决"；m07 的"自研 vs 集成"决策链直接建在这章的成本/合规分析上。</p>
+<hr>
+<h3>Cheatsheet（memory 型，参考用）</h3>
+<pre><code>ADD-only: 写路径只单调累积, 裁决权给读路径
+  动机: 写路径信息不充分时的裁决不可逆(误删找不回) + 两次调用贵
+  哲学: &quot;memory is retrieval, not storage&quot;
+
+4个代价: 无冲突消解 / 无时间衰减(reference_date抛错 main.py:1422)
+         / 库只增不减 / 召回过时版本
+
+平台独有: temporal scoring / latest_only / Dream(minHours24,minSessions5,minMemories20)
+          / 图memory(#6808移出OSS)
+
+隐私: 数据发LLM; OSS+本地LLM=数据不出域
+成本: 写=LLM token; 读=延迟; infer=False跳过LLM</code></pre>
+<h3>课后检验记录</h3>
+<blockquote>（课后阶段追加）kp06-01/02/03/04 → 判定结果 + 引擎返回。</blockquote></div>
+  </div>
+</section>

@@ -1,0 +1,106 @@
+<section class="module" id="module-07">
+  <div class="module-content">
+    <div class="module-header">
+      <span class="module-number">07</span>
+      <h2 class="module-title">动手实验与决策链</h2>
+      <p class="module-subtitle">demo 实跑 · 自研 vs 集成</p>
+    </div>
+    <div class="screen"><h2>Chapter 7 — 动手实验与决策链（教材式）</h2>
+<blockquote>学习方式：跟随材料逐节学习 → 课后答疑 → 课后检验 → 章节完成（模块级闸门）<br>材料生成: 2026-08-12 | 章节状态: teaching</blockquote>
+<h3>0. 章节导言</h3>
+<p>前面六章完成了从"是什么"到"为什么"的认知闭环。这一章把它<strong>落地</strong>：亲手跑一个 add/search demo（kp07-01），再把六章的认知收束成"何时自研 vs 何时集成"的决策链（kp07-02）。这是把"理解"变成"判断力"的一章。</p>
+<hr>
+<h3>1. 用 OSS 搭建可运行的 add/search demo（kp07-01）</h3>
+<h4>1.1 学习目标</h4>
+<p>学完你能：从零搭一个可运行的 mem0 demo，解释每条关键配置，并验证 ADD-only 与融合打分的行为。</p>
+<h4>1.2 讲解 + 源码走读</h4>
+<p><strong>准备环境</strong>（读路径依赖本地 LLM 时用 Ollama）：</p>
+<pre><code>pip install mem0ai[nlp]
+python -m spacy download en_core_web_sm
+# 可选: 本地 LLM + embedding
+ollama pull llama3
+ollama pull nomic-embed-text</code></pre>
+<p><strong>demo 1 — 最简 add/search</strong>（验证数据流，走 OpenAI 默认）：</p>
+<pre><code>from mem0 import Memory
+m = Memory()
+
+# 写入：蒸馏成事实
+m.add([
+    {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;我叫张三，喜欢 Rust 和系统编程，最近在读操作系统源码&quot;},
+    {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;好的，已经记住了！&quot;}
+], user_id=&quot;demo&quot;)
+
+# 检索：explain 看分数构成
+r = m.search(&quot;张三的编程偏好&quot;, user_id=&quot;demo&quot;, top_k=3, explain=True)
+for item in r[&quot;results&quot;]:
+    print(item[&quot;memory&quot;], &quot;→&quot;, item.get(&quot;score_details&quot;, {}).get(&quot;final_score&quot;))</code></pre>
+<p><strong>预期观察</strong>：返回的是<strong>抽取后的事实</strong>（不是原始对话句），且 <code>score_details</code> 里有 <code>semantic/bm25/entity</code> 各项——这就是 m04/m05 讲的管线在真实运行。</p>
+<p><strong>demo 2 — 验证 ADD-only 行为</strong>（本地 LLM，数据不出域）：</p>
+<pre><code>from mem0 import Memory
+from mem0.configs.base import MemoryConfig
+from mem0.configs.llms.ollama import OllamaConfig
+from mem0.configs.embeddings.ollama import OllamaConfig as EmbCfg
+from mem0.configs.vector_stores.chroma import ChromaConfig
+
+config = MemoryConfig(
+    llm=OllamaConfig(model=&quot;llama3&quot;),
+    embedder=EmbCfg(model=&quot;nomic-embed-text&quot;),
+    vector_store=ChromaConfig(),
+)
+m = Memory.from_config(config)</code></pre>
+<p><strong>动手验证清单</strong>（每项对应课程知识点）：</p>
+<ol><li>add 两次同一句话 → MD5 去重生效（m04-03），第二次不产生重复记忆。</li><li>search 一段完全无关的话 → threshold 过滤（m05-02），返回空或极少。</li><li><code>explain=True</code> → 看到三项分数构成（m05-04）。</li><li>改一句"改主意"的话 → 新旧事实并存（m06-02），验证 ADD-only 无冲突消解。</li></ol>
+<h4>1.3 小结</h4>
+<ul><li>最简 demo = <code>Memory()</code> + <code>add</code> + <code>search(explain=True)</code>，走默认 OpenAI。</li><li>本地 demo = 换 Ollama LLM/embedding + Chroma 向量库，数据不出域。</li><li>动手验证清单对应 m04/m05/m06 核心结论，是"看得见的证据"。</li></ul>
+<h4>1.4 课后思考题</h4>
+<ul><li><strong>kp07-01（procedure）</strong>：demo 2 的 <code>ChromaConfig()</code> 换成 <code>QdrantConfig(host=..., port=...)</code> 需要改几行？这验证了架构的哪个特性？（提示：m02 的工厂注册）</li></ul>
+<hr>
+<h3>2. 自研 vs 集成 mem0 的决策链（kp07-02）</h3>
+<h4>2.1 学习目标</h4>
+<p>学完你能：面对任意"要不要用 mem0"的场景，走出一条有依据的决策链，而非拍脑袋。</p>
+<h4>2.2 讲解 + 源码走读</h4>
+<p><strong>核心分界</strong>：<strong>要不要在写路径做 LLM 蒸馏？</strong></p>
+<pre><code>要不要写路径LLM蒸馏？
+├── 不要（只要文本相似）→ 裸向量库 + 自写 RAG
+│     理由: mem0 的写路径成本（LLM token、抽取延迟）对你的需求是纯开销
+├── 要，标准事实场景 → 集成 mem0
+│     理由: 写路径抽取 + 多信号召回 + 隔离 + 生命周期，全都现成
+├── 要，强领域结构 → fork mem0 OSS 深度定制
+│     理由: 替换 prompt（configs/prompts.py）/ 融合权重（scoring.py）/ 存储
+│           ——比从零自研划算得多
+└── 从零自研只在&quot;连骨架都要重写&quot;时</code></pre>
+<p><strong>附加判据</strong>（m06 的边界落地）：</p>
+<div class="table-wrap"><table>
+<tr><th>问题</th><th>指向</th></tr>
+<tr><th>---</th><th>---</th></tr>
+<tr><th>数据能出境吗？</th><th>否 → OSS + 本地 LLM（Ollama）</th></tr>
+<tr><th>召回需求是文本相似还是事实级？</th><th>事实级 → mem0；文本级 → 向量库</th></tr>
+<tr><th>要生命周期/多租户隔离吗？</th><th>要 → mem0 内置；不要 → 可省</th></tr>
+<tr><th>成本敏感？</th><th>每次 add 烧 LLM token → 控频率 / <code>infer=False</code></th></tr>
+<tr><th>要时间推理/矛盾消解吗？</th><th>要 → 考虑 Zep（m01-03）</th></tr>
+</table></div>
+<p><strong>代码证据</strong>：<code>configs/prompts.py:468</code>（替换抽取 prompt 的入口）、<code>utils/scoring.py:57,97-101</code>（调融合权重/自适应）、<code>utils/factory.py:42</code>（换存储）。</p>
+<h4>2.3 小结</h4>
+<ul><li>决策链第一问：<strong>要不要写路径 LLM 蒸馏</strong>——答案分叉到裸向量库 / 集成 / fork / 自研。</li><li>附加判据：出境、召回粒度、生命周期、成本、时间推理。</li><li>fork 比自研划算：替换点都在 configs/prompts/scoring/factory，骨架可复用。</li></ul>
+<h4>2.4 课后思考题</h4>
+<ul><li><strong>kp07-02（design）</strong>：你的团队已经有一个裸向量库 RAG 在跑文档问答，现在要加"记住用户偏好"功能。用决策链分析：是扩展现有 RAG、集成 mem0、还是 fork mem0？给出完整推理。</li></ul>
+<hr>
+<h3>章节总结</h3>
+<p><strong>本章心智模型</strong>：把六章认知收束成一句选型格言——<strong>"要不要写路径 LLM 蒸馏"决定架构边界，数据出境决定 OSS/平台，时间推理决定 mem0/Zep</strong>。动手实验证明的不只是"能跑"，更是 m04/m05/m06 的设计判断在真实数据上成立。</p>
+<p><strong>关键 file:line 索引</strong>：<code>configs/prompts.py:468</code>（定制抽取）、<code>utils/scoring.py:57,97-101</code>（调融合）、<code>utils/factory.py:42</code>（换存储）。</p>
+<p><strong>课程收束</strong>：到这里，你已走完 mem0 的完整认知闭环——定位（m01）→ 运行（m02）→ 骨架（m03）→ 写路径（m04）→ 读路径（m05）→ 哲学（m06）→ 决策（m07）。回到 m01 那句话，你现在能用自己的话解释它的每一层含义。</p>
+<hr>
+<h3>Cheatsheet（memory 型，参考用）</h3>
+<pre><code>决策链: 要不要写路径LLM蒸馏?
+  不要 → 裸向量库+自写RAG
+  要+标准 → 集成 mem0
+  要+强领域 → fork mem0 OSS（改 prompts.py / scoring.py / factory.py）
+  连骨架都要重写 → 才自研
+
+附加判据: 出境?(OSS+本地LLM) / 事实级vs文本级 / 生命周期? / 成本? / 时间推理?(Zep)
+
+demo 验证清单: ①MD5去重 ②threshold过滤 ③explain三项分数 ④改主意新旧并存</code></pre>
+<h3>课后检验记录</h3>
+<blockquote>（课后阶段追加）kp07-01/02 → 判定结果 + 引擎返回。</blockquote></div>
+  </div>
+</section>

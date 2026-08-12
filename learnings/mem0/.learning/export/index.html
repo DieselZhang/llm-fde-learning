@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mem0 深度源码课程</title>
+
+  <!-- Fonts: Sora (display) · DM Sans (body) · JetBrains Mono (code) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Per-course accent. Pick one palette; only these four lines change.
+         ember    #D9542E / #BF4322 / #FCEDE7 / #E68A6F   (default)
+         teal     #2C7C9C / #225F77 / #E6F1F5 / #5F9DB8
+         plum     #7C6BB0 / #5F5193 / #EEEAF6 / #A89AD0
+         pine     #2E8B57 / #226B41 / #E7F4EC / #6BB089
+         amber    #C9912F / #A8761F / #FBF1DC / #DFBE74     -->
+  <style>
+    :root {
+      --color-accent:       #2C7C9C;
+      --color-accent-hover: #225F77;
+      --color-accent-light: #E6F1F5;
+      --color-accent-muted: #5F9DB8;
+    }
+  </style>
+
+  <script src="main.js" defer></script>
+</head>
+<body>
+  <nav class="nav">
+    <div class="progress-bar" id="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
+    <div class="nav-inner">
+      <span class="nav-title">Mem0 深度源码课程</span>
+      <div class="nav-dots" id="nav-dots" role="tablist">
+              <span class="nav-dot" data-target="module-00" title="课程地图与价值"></span>
+      <span class="nav-dot" data-target="module-01" title="定位与生态"></span>
+      <span class="nav-dot" data-target="module-02" title="构建与环境"></span>
+      <span class="nav-dot" data-target="module-03" title="总体架构心智模型"></span>
+      <span class="nav-dot" data-target="module-04" title="写入管线 add()"></span>
+      <span class="nav-dot" data-target="module-05" title="检索管线 search()"></span>
+      <span class="nav-dot" data-target="module-06" title="设计哲学与权衡"></span>
+      <span class="nav-dot" data-target="module-07" title="动手实验与决策链"></span>
+      </div>
+    </div>
+  </nav>
+
+  <main id="main">
+<section class="module" id="module-00">
+  <div class="module-content">
+    <div class="module-header">
+      <span class="module-number">00</span>
+      <h2 class="module-title">课程地图与价值</h2>
+      <p class="module-subtitle">Mem0 深度源码课程 · 7 模块 / 23 知识点总览</p>
+    </div>
+    <div class="screen"><h2>Mem0 深度源码课程 — COVERAGE</h2>
+<blockquote>本课程由 <strong>repo-mastery</strong>（一个把任意开源仓库变成深度开发课程的 skill）生成。<br>目标：从源码讲透 mem0 的架构、数据流与设计权衡。覆盖 7 模块 / 23 知识点，Markdown + HTML 双格式。<br>生成日期: 2026-08-12 | 仓库: <code>mem0ai/mem0</code>（main 分支）</blockquote>
+<hr>
+<h3>价值定位</h3>
+<p>mem0 是给 AI Agent 用的<strong>开源记忆层</strong>：写路径用 LLM 把对话蒸馏成自包含持久事实（ADD-only），读路径用语义 + BM25 + 实体多信号融合打分召回，按 <code>user_id/agent_id/run_id</code> 隔离，附带完整生命周期。 <strong>核心一句话</strong>：向量库回答"哪段文本最像"；mem0 回答"哪些持久事实对当前用户最相关"。</p>
+<p>选它 vs 自研的核心判据：<strong>要不要在写路径做 LLM 蒸馏</strong> + 场景要不要时间推理。详见 [positioning.md](positioning.md)。</p>
+<hr>
+<h3>课程地图（7 模块 / 23 知识点）</h3>
+<div class="table-wrap"><table>
+<tr><th>模块</th><th>学什么</th><th>知识点数</th><th>状态</th></tr>
+<tr><th>---</th><th>---</th><th>---</th><th>---</th></tr>
+<tr><th><strong>m01</strong> 定位与生态</th><th>mem0 是什么、vs 谁、何时选</th><th>3</th><th>✅ 已覆盖 · 待复习验证</th></tr>
+<tr><th><strong>m02</strong> 构建与环境</th><th>装起来、配置、API 用法</th><th>3</th><th>✅ 已覆盖 · 待复习验证</th></tr>
+<tr><th><strong>m03</strong> 总体架构心智模型</th><th>分层/存储/三入口</th><th>3</th><th>✅ 已覆盖 · 待复习验证</th></tr>
+<tr><th><strong>m04</strong> 写入管线 add()</th><th>8 阶段、抽取、去重、实体</th><th>4</th><th>✅ 已覆盖 · 待复习验证</th></tr>
+<tr><th><strong>m05</strong> 检索管线 search()</th><th>数据流、融合、RRF、实体加分</th><th>4</th><th>✅ 已覆盖 · 待复习验证</th></tr>
+<tr><th><strong>m06</strong> 设计哲学与权衡</th><th>ADD-only、代价、平台分界</th><th>4</th><th>✅ 已覆盖 · 待复习验证</th></tr>
+<tr><th><strong>m07</strong> 动手实验与决策链</th><th>demo 实跑、自研 vs 集成</th><th>2</th><th>✅ 已覆盖 · 待复习验证</th></tr>
+</table></div>
+<blockquote>状态说明：模块已走教材式闸门（章节全部生成），真掌握待 spaced review 验证——<strong>covered ≠ mastered</strong>，不伪造掌握度。</blockquote>
+<hr>
+<h3>模块详解（每模块完整章节见 <code>.learning/chapters/</code>）</h3>
+<h4>m01 定位与生态</h4>
+<ul><li><strong>kp01-01</strong> mem0 是什么与生态位：白盒记忆——写路径蒸馏事实、读路径多信号召回、内置隔离与生命周期。<code>main.py:930-959</code>（抽取）、<code>prompts.py:468</code>（契约）。</li><li><strong>kp01-02</strong> 与裸向量库/RAG/Claude Code 的本质差异：记忆形态决定架构——稀疏精确笔记 vs 海量模糊事实库；RAG 面向外部知识，mem0 面向用户事实。</li><li><strong>kp01-03</strong> 与 Zep/Letta/LangMem 的选型判据：<strong>要不要写路径 LLM 蒸馏</strong> + 要不要时间推理。Zep 赢时效、Letta 赢自治、LangMem 赢 LangGraph 生态 <code>[web]</code>。</li></ul>
+<h4>m02 构建与环境</h4>
+<ul><li><strong>kp02-01</strong> 源码构建与运行：<code>pip install mem0ai[nlp]</code> + spaCy；<code>Memory()</code> 零参数可用。</li><li><strong>kp02-02</strong> MemoryConfig 与 Provider 工厂：<code>configs/base.py:29</code> 五要素；<code>factory.py:42</code> 注册表（LLM 18 / VS 25 / Emb 11 / Rerank 5）。</li><li><strong>kp02-03</strong> 核心 API 用法：add/search/get/get_all/update/delete/delete_all/history——<code>update</code>/<code>delete</code> 是手动按 ID，非 LLM 驱动。</li></ul>
+<h4>m03 总体架构心智模型</h4>
+<ul><li><strong>kp03-01</strong> 分层架构与依赖：入口→配置→Provider→存储，依赖自上而下；<code>AsyncMemory</code> 是 <code>Memory</code> 的 <code>to_thread</code> 镜像。</li><li><strong>kp03-02</strong> 三层存储：向量库（事实+实体，可检索）/ SQLite messages（滚动 10 条，抽取上下文）/ SQLite history（审计）。</li><li><strong>kp03-03</strong> 三入口关系：同步/异步 × OSS/平台 的笛卡尔积，接口镜像 → 一行切换。</li></ul>
+<h4>m04 写入管线 add()</h4>
+<ul><li><strong>kp04-01</strong> V3 八阶段：作用域→上下文→已有记忆→<strong>单次抽取</strong>→embed→MD5 去重→批量写→实体链接。全程仅一次 LLM 调用。</li><li><strong>kp04-02</strong> 抽取 + UUID 重映射：真实 UUID 重映射成 <code>"0".."9"</code> 防 LLM 幻觉 id，<code>main.py:924-928</code>。</li><li><strong>kp04-03</strong> MD5 去重而非语义：prompt 软去重（免费）→ MD5 硬去重（确定性）→ 语义留检索期；阈值不可靠 + 不可逆合并违背 ADD-only。</li><li><strong>kp04-04</strong> 实体链接替代图 DB：spaCy 抽实体 → 批量 embed → 精确/语义(≥0.95)匹配 → 并集更新 <code>linked_memory_ids</code>；图 memory 平台独有（#6808）。</li></ul>
+<h4>m05 检索管线 search()</h4>
+<ul><li><strong>kp05-01</strong> 检索数据流：预处理→embed→over-fetch(<code>max(limit×4,60)</code>)→关键词→BM25 归一→实体加分→候选→融合。</li><li><strong>kp05-02</strong> 加性融合公式：<code>combined = min((sem+bm25+entity)/max_possible, 1.0)</code>；threshold <strong>先滤语义分</strong>再融合。</li><li><strong>kp05-03</strong> 加性融合而非 RRF：mem0 分数量纲可比 → 保留分数信息、可解释（explain）、可调参；RRF 适合异构不可比检索器。</li><li><strong>kp05-04</strong> 实体加分 + explain：<code>sim × 0.5 × 1/(1+0.001×(n_linked-1)²)</code>，封顶 [0,0.5]，max 去重；<code>explain=True</code> 逐项可归因。</li></ul>
+<h4>m06 设计哲学与权衡</h4>
+<ul><li><strong>kp06-01</strong> 为什么 ADD-only：写路径在信息不充分时做不可逆裁决会误删找不回；V3 只单调累积，裁决移给读路径——"memory is retrieval, not storage"。</li><li><strong>kp06-02</strong> ADD-only 代价：无冲突消解 / 无时间衰减（<code>reference_date</code> 抛错 <code>main.py:1422</code>）/ 库只增不减 / 召回过时版本。</li><li><strong>kp06-03</strong> 平台 vs OSS：时间衰减/temporal scoring/latest_only/Dream/图 memory 平台独有；OSS 保持轻量可自托管。</li><li><strong>kp06-04</strong> 隐私/成本/合规：数据发 LLM 是常态；OSS+本地 LLM=数据不出域；写路径烧 token、读路径重延迟；<code>infer=False</code> 跳过 LLM。</li></ul>
+<h4>m07 动手实验与决策链</h4>
+<ul><li><strong>kp07-01</strong> OSS demo：<code>Memory()</code> + <code>add</code> + <code>search(explain=True)</code>；验证 MD5 去重、threshold 过滤、新旧并存。</li><li><strong>kp07-02</strong> 自研 vs 集成决策链：要不要写路径蒸馏 → 裸向量库 / 集成 / fork / 自研；fork 比自研划算（改 <code>prompts.py</code>/<code>scoring.py</code>/<code>factory.py</code>）。</li></ul>
+<hr>
+<h3>复习计划（spaced review）</h3>
+<p>23 个知识点均已初始化复习（concept/design 走 Feynman 复述判定，procedure 走量化闸门）。设计类间隔 14 天，概念/程序类 3 天起。用 <code>/repo-mastery review</code> 按到期队列复习。</p>
+<h3>后续学习入口</h3>
+<ul><li>读完整教材：<code>.learning/chapters/m01.md</code> … <code>m07.md</code></li><li>看架构叙事：<code>.learning/notes/overview.md</code></li><li>看生态定位：<code>.learning/positioning.md</code></li><li>交互式复习：<code>/repo-mastery review</code></li></ul></div>
+  </div>
+</section>
+<section class="module" id="module-01">
+  <div class="module-content">
+    <div class="module-header">
+      <span class="module-number">01</span>
+      <h2 class="module-title">定位与生态</h2>
+      <p class="module-subtitle">mem0 是什么、vs 谁、何时选</p>
+    </div>
+    <div class="screen"><h2>Chapter 1 — 定位与生态（教材式）</h2>
+<blockquote>学习方式：跟随材料逐节学习 → 课后答疑 → 课后检验 → 章节完成（模块级闸门）<br>材料生成: 2026-08-12 | 章节状态: teaching</blockquote>
+<h3>0. 章节导言</h3>
+<p>为什么先学定位？因为 mem0 所有的设计决策（ADD-only、实体链接、多信号融合）都从<strong>它想当什么、不想当什么</strong>出发。先建立"它在生态里的位置"，后面的每个实现细节就有了锚点——你会反复用一句话校准理解：<strong>mem0 回答"哪些持久事实对当前用户最相关"，向量库回答"哪段文本最像"</strong>。</p>
+<p>这一章解决三件事：mem0 是什么（kp01-01）、它与最容易混淆的三个方案差在哪（kp01-02）、什么时候该选它而非 Zep/Letta/LangMem（kp01-03）。</p>
+<hr>
+<h3>1. mem0 是什么与生态位（kp01-01）</h3>
+<h4>1.1 学习目标</h4>
+<p>学完你能回答：mem0 解决什么问题、用什么核心机制解决、它明确拒绝做什么。</p>
+<h4>1.2 讲解 + 源码走读</h4>
+<p><strong>痛点</strong>：LLM 本身无状态。跨会话的个性化——记住用户偏好、上次的决定、长期的约束——需要把对话变成<strong>可检索的持久记忆</strong>。</p>
+<p><strong>核心机制（一句话）</strong>：白盒记忆——<strong>写路径</strong>用 LLM 把对话蒸馏成自包含事实（而非存原始对话块），<strong>读路径</strong>做语义 + 关键词 + 实体多信号融合召回，并按 <code>user_id / agent_id / run_id</code> 隔离。</p>
+<p><strong>生态位（它站在哪）</strong>：一条光谱上——</p>
+<pre><code>裸向量库 ───────────── mem0 ──────────── 完整 Agent 框架
+只做文本相似           事实抽取+召回        Letta/LangMem
+无写路径逻辑            +生命周期            Agent 自治记忆</code></pre>
+<p>mem0 不是向量库（那是"怎么存"的实现），也不是 Agent 框架（那是"怎么用记忆思考"）。它占据<strong>事实记忆层</strong>——最容易被误读成"RAG"或"向量库封装"，但它的设计核心在<strong>存什么</strong>（LLM 抽取）和<strong>怎么取</strong>（多信号融合 + 隔离 + 生命周期）。</p>
+<p><strong>证据</strong>：<code>mem0/configs/prompts.py:468</code> 的 <code>ADDITIVE_EXTRACTION_PROMPT</code> 强制 LLM 输出 <code>{"memory":[{id,text,attributed_to,linked_memory_ids}]}</code>——这就是"把对话变成事实"的契约；<code>mem0/memory/main.py:906-1196</code> 的 V3 管线把一次对话蒸馏成若干持久事实。</p>
+<h4>1.3 小结</h4>
+<ul><li>mem0 解决 LLM 无状态 → 跨会话个性化需要持久可检索记忆。</li><li>核心是<strong>白盒记忆</strong>：写路径蒸馏事实，读路径多信号召回，非存原始对话块。</li><li>生态位：事实记忆层，介于裸向量库与完整 Agent 框架之间。</li><li>误区红线：它的问题不是"记忆存哪里"（向量库只是实现），而是"存什么 + 怎么取"。</li></ul>
+<h4>1.4 课后思考题</h4>
+<ul><li><strong>kp01-01（design）</strong>：如果面试官说"mem0 不就是把记忆存到向量库吗"，你如何用一句话纠正，并指出它的设计核心实际在写路径的哪个决策上？</li></ul>
+<hr>
+<h3>2. 与裸向量库/RAG/Claude Code auto memory 的本质差异（kp01-02）</h3>
+<h4>2.1 学习目标</h4>
+<p>学完你能：面对"mem0 和 RAG 有什么区别""和 Claude Code 的记忆有什么区别"这类问题，给出<strong>本质维度</strong>的对比而非罗列功能。</p>
+<h4>2.2 讲解 + 源码走读</h4>
+<p><strong>三个对比对象，三个本质维度</strong>：</p>
+<div class="table-wrap"><table>
+<tr><th>维度</th><th>裸向量库/自建 RAG</th><th>Claude Code auto memory</th><th>mem0</th></tr>
+<tr><th>---</th><th>---</th><th>---</th><th>---</th></tr>
+<tr><th>写路径</th><th>存原始 chunk，无抽取</th><th>Claude 写自然语言 Markdown 笔记</th><th><strong>LLM 蒸馏成持久事实</strong>（<code>main.py:930-959</code>）</th></tr>
+<tr><th>检索</th><th>纯语义相似</th><th>MEMORY.md 索引 + 模型上下文判断（<strong>无向量检索</strong>）</th><th>语义 + BM25 + 实体融合（<code>scoring.py:60-139</code>）</th></tr>
+<tr><th>作用域</th><th>自己写</th><th>按项目 git 根</th><th><code>user/agent/run</code> 内置（<code>main.py:143</code>）</th></tr>
+<tr><th>生命周期</th><th>自己写</th><th>/memory 编辑 + Auto Dream</th><th>update/delete/history 完整 API</th></tr>
+</table></div>
+<p><strong>vs 裸向量库 / RAG</strong>：RAG 面向<strong>外部知识</strong>（文档 chunk），mem0 面向<strong>用户事实</strong>（抽取条目）。两者读路径都是"检索增强循环"，但 mem0 多了 RAG <strong>没有的写路径</strong>——怎么提炼该记的东西，以及生命周期管理。裸向量库只回答"哪段文本最像"，mem0 回答"哪些事实对当前用户最相关"。</p>
+<p><strong>vs Claude Code auto memory</strong>：记忆<strong>形态</strong>决定架构。Claude Code 的记忆是<strong>稀疏、精确、人可读的"项目笔记"</strong>——量小、要求精确、上下文判断足够，引入向量语义召回反而有害（过拟合噪声）。mem0 是<strong>海量、模糊、机器检索的"事实库"</strong>——量大、召回需求模糊、必须打分排序。<strong>Pi 是 mem0 的用户（用 <code>@mem0/pi-agent-plugin</code>），不是对比项</strong>——Pi 是通用助手需要事实型记忆，所以直接集成 mem0。</p>
+<h4>2.3 小结</h4>
+<ul><li>vs RAG：外部知识 vs 用户事实；读路径同，写路径 mem0 独有。</li><li>vs 裸向量库：存什么（抽取 vs chunk）+ 怎么取（多信号 vs 纯语义）+ 生命周期。</li><li>vs Claude Code：记忆形态决定架构——稀疏精确笔记 vs 海量模糊事实库。</li><li>记忆形态 → 架构是这条知识的可迁移结论（选型时先问形态）。</li></ul>
+<h4>2.4 课后思考题</h4>
+<ul><li><strong>kp01-02（design）</strong>：为什么 Claude Code 的 auto memory <strong>不做</strong>向量检索而 mem0 做？如果把 mem0 的思路强套到 Claude Code 的记忆场景，会在哪里变糟？</li></ul>
+<hr>
+<h3>3. 与 Zep/Letta/LangMem 的选型判据（kp01-03）</h3>
+<h4>3.1 学习目标</h4>
+<p>学完你能给出<strong>可迁移的决策规则</strong>：什么条件下选 mem0，什么条件下选 Zep/Letta/LangMem——而不是背一个 feature 列表。</p>
+<h4>3.2 讲解 + 源码走读</h4>
+<p><strong>生态事实</strong>（<code>[web]</code> 2026-08-12，详见 <code>positioning.md</code>）：</p>
+<div class="table-wrap"><table>
+<tr><th>方案</th><th>核心动作</th><th>最强点</th><th>代价</th></tr>
+<tr><th>---</th><th>---</th><th>---</th><th>---</th></tr>
+<tr><th><strong>mem0</strong></th><th>LLM 抽取持久事实</th><th>生态最大（~51.8k stars）、上手最快、OSS 自托管自由</th><th>时间推理弱（LongMemEval temporal 49%）；graph 付费墙</th></tr>
+<tr><th><strong>Zep</strong></th><th>时间知识图谱（bi-temporal）</th><th>时效/矛盾消解最强（temporal 63.8%）</th><th>重度托管服务（CE 2025 已弃）、贵</th></tr>
+<tr><th><strong>Letta</strong></th><th>Agent 自编辑分层记忆</th><th>长时自治 Agent（LoCoMo 74.0%）</th><th>是框架不是 drop-in API、重</th></tr>
+<tr><th><strong>LangMem</strong></th><th>LangGraph 原生 store</th><th>零新依赖（在 LangChain 生态内）</th><th>绑死 LangGraph、LoCoMo 最低 58.1%</th></tr>
+</table></div>
+<p><strong>可迁移决策规则</strong>（这是 kp01-03 的"能力"所在）：</p>
+<ol><li><strong>要不要在写路径做 LLM 蒸馏？</strong> 不要 → 裸向量库 + 自写 RAG 足够。</li><li>要蒸馏 + <strong>标准事实场景</strong> → <strong>mem0</strong>（最省事、生态最全）。</li><li>要蒸馏 + <strong>时间/矛盾消解</strong>（"什么时候变的"）→ <strong>Zep</strong>。</li><li>要蒸馏 + <strong>Agent 自治长时运行</strong> → <strong>Letta</strong>。</li><li>已扎根 LangGraph → <strong>LangMem</strong>。</li><li><strong>数据不能出境</strong> → mem0 OSS 自托管 + 本地 LLM（18 LLM / 25 向量库，<code>factory.py</code>）。</li></ol>
+<p><strong>判据来源锚点</strong>：<code>positioning.md</code> 的"When to pick it"行（<code>[web]</code> + <code>[src]</code> 双证）。</p>
+<h4>3.3 小结</h4>
+<ul><li>选型核心判据：<strong>要不要在写路径做 LLM 蒸馏</strong> + 场景是否要时间推理。</li><li>mem0 的差异化 = 事实抽取 + 最大生态 + OSS 自托管自由；代价 = 时间推理弱。</li><li>Zep 赢在时效、Letta 赢在自治、LangMem 赢在 LangGraph 零依赖——各自换走了"简单 drop-in"。</li></ul>
+<h4>3.4 课后思考题</h4>
+<ul><li><strong>kp01-03（design）</strong>：你的产品要给客服助手做长期用户画像记忆，要求数据不出域、且要处理"用户改主意"（偏好变更）——按决策规则，mem0、Zep、自建 RAG 里选谁？理由逐条列出（引用矩阵行）。</li></ul>
+<hr>
+<h3>章节总结</h3>
+<p><strong>本章心智模型</strong>：mem0 是站在光谱中间的事实记忆层——写路径蒸馏、读路径多信号召回、内置隔离与生命周期。对比任何方案时先问两个维度：<strong>存什么</strong>（chunk vs 事实 vs 笔记）与<strong>怎么取</strong>（纯语义 vs 多信号 vs 索引+上下文）。选型时最核心判据是<strong>写路径要不要 LLM 蒸馏</strong> + <strong>场景要不要时间推理</strong>。</p>
+<p><strong>关键 file:line 索引</strong>：<code>main.py:930-959</code>（LLM 抽取）、<code>scoring.py:60-139</code>（融合）、<code>main.py:143</code>（作用域剥离）、<code>factory.py:42</code>（Provider 注册）。</p>
+<p><strong>与整体架构的钩子</strong>：本章"白盒记忆"的框架，正是 m04/m05 的 add/search 数据流要展开的两半；m06 的 ADD-only 哲学是"写路径只蒸馏不裁决"的展开。</p>
+<hr>
+<h3>Cheatsheet（memory 型，参考用）</h3>
+<pre><code># mem0 核心概念速记
+mem0 = 写路径LLM蒸馏事实 + 读路径多信号召回 + user/agent/run隔离 + 生命周期
+vs 向量库: 存什么不同（事实 vs chunk）+ 怎么取不同（多信号 vs 纯语义）
+vs RAG:    外部知识 vs 用户事实；写路径是 mem0 独有
+vs Claude Code: 记忆形态决定架构（稀疏笔记 vs 海量事实库）
+vs Zep:    时间推理（Zep 强） / vs Letta: 自治（Letta 强） / vs LangMem: LangGraph生态
+选型判据: 要不要写路径LLM蒸馏 + 要不要时间推理</code></pre>
+<h3>课后检验记录</h3>
+<blockquote>（课后阶段追加）kp01-01/02/03 → 判定结果 + 引擎返回。</blockquote></div>
+  </div>
+</section>
+<section class="module" id="module-02">
+  <div class="module-content">
+    <div class="module-header">
+      <span class="module-number">02</span>
+      <h2 class="module-title">构建与环境</h2>
+      <p class="module-subtitle">装起来、配好、用起来</p>
+    </div>
+    <div class="screen"><h2>Chapter 2 — 构建与环境（教材式）</h2>
+<blockquote>学习方式：跟随材料逐节学习 → 课后答疑 → 课后检验 → 章节完成（模块级闸门）<br>材料生成: 2026-08-12 | 章节状态: teaching</blockquote>
+<h3>0. 章节导言</h3>
+<p>上一章建立了"mem0 是什么"的框架。这一章把抽象落地：把它<strong>跑起来</strong>（kp02-01）、<strong>配好</strong>（kp02-02）、<strong>用起来</strong>（kp02-03）。信任感从这里建立——后面的 add/search 数据流讲解，你可以在一个真实实例上反复验证。</p>
+<hr>
+<h3>1. 源码构建与运行 mem0 SDK（kp02-01）</h3>
+<h4>1.1 学习目标</h4>
+<p>学完你能：从零安装 mem0，写一个能 add/search 的最小程序并解释每个关键参数。</p>
+<h4>1.2 讲解 + 源码走读</h4>
+<p><strong>安装</strong>（README <code>[src]</code>）：</p>
+<pre><code>pip install mem0ai                          # 核心 SDK
+pip install mem0ai[nlp]                     # + spaCy 实体抽取（hybrid search 需要）
+python -m spacy download en_core_web_sm     # + 实体抽取模型</code></pre>
+<p><strong>依赖契约</strong>：<code>pyproject.toml:15</code> <code>requires-python = "&gt;=3.10,&lt;4.0"</code>。LLM 默认 <code>gpt-5-mini</code>、embedding 默认 <code>text-embedding-3-small</code>（README <code>[src]</code>），<strong>没有 LLM 就不能跑</strong>——<code>main.py:946-959</code> 抽取失败会抛 <code>LLMError</code>（不再静默返回空，2026 修复的健壮性改进）。</p>
+<p><strong>最小可运行程序</strong>（README Basic Usage <code>[src]</code> 精简）：</p>
+<pre><code>from openai import OpenAI
+from mem0 import Memory
+
+memory = Memory()  # 读 ~/.mem0/ 下配置，默认 OpenAI
+
+# 写入：把这段对话蒸馏成事实
+memory.add([
+    {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;我叫张三，喜欢 Rust 和系统编程&quot;},
+    {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;好的，我记住了！&quot;}
+], user_id=&quot;alice&quot;)
+
+# 检索：多信号融合召回
+results = memory.search(&quot;张三喜欢什么语言&quot;, filters={&quot;user_id&quot;: &quot;alice&quot;}, top_k=3)
+for r in results[&quot;results&quot;]:
+    print(r[&quot;memory&quot;])</code></pre>
+<p><strong>要点</strong>：<code>Memory()</code> 零参数即可——默认走 OpenAI + <code>~/.mem0/</code> 本地 SQLite；<code>user_id</code> 是作用域隔离的最小单元（<code>main.py:143</code> <code>_strip_identity_keys</code> 会从 metadata 剥离身份键防篡改）。</p>
+<h4>1.3 小结</h4>
+<ul><li>安装 <code>pip install mem0ai</code> + <code>[nlp]</code> extra（hybrid search 需要 spaCy）。</li><li>默认 LLM gpt-5-mini / embedding text-embedding-3-small；无 LLM 则 add() 抛 <code>LLMError</code>。</li><li><code>Memory()</code> 零参数可用；最小数据流 = <code>add(messages, user_id=...)</code> → <code>search(query, filters)</code>。</li></ul>
+<h4>1.4 课后思考题</h4>
+<ul><li><strong>kp02-01（procedure）</strong>：如果一台无外网的机器要跑 mem0，最小改动是什么？（提示：两个 provider 维度 + 一个存储维度）请给出配置思路而非代码。</li></ul>
+<hr>
+<h3>2. MemoryConfig 配置与 Provider 工厂注册（kp02-02）</h3>
+<h4>2.1 学习目标</h4>
+<p>学完你能：看懂 <code>MemoryConfig</code> 结构、知道四类 Provider 如何被工厂注册、能替换默认的 LLM/向量库。</p>
+<h4>2.2 讲解 + 源码走读</h4>
+<p><strong>配置结构</strong>（<code>mem0/configs/base.py:29</code>）：</p>
+<pre><code>MemoryConfig(
+    llm=...,
+    embedder=...,
+    vector_store=...,
+    reranker=...,
+    history_db_path=&quot;~/.mem0/history.db&quot;,   # SQLite 审计日志路径
+    version=&quot;v1.0&quot;,
+    custom_instructions=&quot;...&quot;,
+)</code></pre>
+<p>Provider 配置类在 <code>mem0/configs/&lt;category&gt;/&lt;provider&gt;.py</code>（LLM→<code>configs/llms/ollama.py</code> 等），不在各目录的 <code>configs.py</code>。这是 repo 的<strong>目录约定</strong>，不是巧合。</p>
+<p><strong>工厂注册</strong>（<code>mem0/utils/factory.py:42</code>）：</p>
+<pre><code>class LlmFactory:
+    provider_to_class = {
+        &quot;openai&quot;: (OpenAILLM, OpenAIConfig),
+        &quot;ollama&quot;: (OllamaLLM, OllamaConfig),
+        # ... 18 个 LLM provider
+    }</code></pre>
+<p>四类工厂——<code>LlmFactory</code>(18) / <code>EmbedderFactory</code>(11) / <code>VectorStoreFactory</code>(25) / <code>RerankerFactory</code>(5)——统一由 <code>provider_to_class</code> 注册（<code>factory.py:42,79-82</code>）。<strong>各分类 <code>__init__.py</code> 为空</strong>：注册表在 <code>factory.py</code>，不在模块内。</p>
+<p><strong>替换 provider 的例子</strong>（换成本地 Ollama + 本地向量库）：</p>
+<pre><code>from mem0 import Memory
+from mem0.configs.base import MemoryConfig
+from mem0.configs.llms.ollama import OllamaConfig
+from mem0.configs.embeddings.ollama import OllamaConfig as OllamaEmbConfig
+from mem0.configs.vector_stores.qdrant import QdrantConfig
+
+config = MemoryConfig(
+    llm=OllamaConfig(model=&quot;llama3&quot;),
+    embedder=OllamaEmbConfig(model=&quot;nomic-embed-text&quot;),
+    vector_store=QdrantConfig(host=&quot;localhost&quot;, port=6333),
+)
+m = Memory.from_config(config)</code></pre>
+<h4>2.3 小结</h4>
+<ul><li><code>MemoryConfig</code> 五要素：llm / embedder / vector_store / reranker / history_db_path。</li><li>Provider 配置类按 <code>configs/&lt;category&gt;/&lt;provider&gt;.py</code> 组织；注册表统一在 <code>factory.py</code> 的 <code>provider_to_class</code>。</li><li>换 LLM/向量库 = 换 config 类，零业务代码改动——这是插件架构的核心收益。</li></ul>
+<h4>2.4 课后思考题</h4>
+<ul><li><strong>kp02-02（procedure）</strong>：要加一个新的 LLM provider "myllm"，需要动哪几个文件？（列出完整清单）</li></ul>
+<hr>
+<h3>3. 核心 API 用法（kp02-03）</h3>
+<h4>3.1 学习目标</h4>
+<p>学完你能：完整说出 <code>Memory</code> 的 8 个核心方法、各自签名与用途，知道什么时候用哪个。</p>
+<h4>3.2 讲解 + 源码走读</h4>
+<div class="table-wrap"><table>
+<tr><th>方法</th><th>签名要点</th><th>用途</th><th>证据</th></tr>
+<tr><th>---</th><th>---</th><th>---</th><th>---</th></tr>
+<tr><th><code>add</code></th><th><code>(messages, *, user_id, agent_id, run_id, metadata)</code></th><th>把对话蒸馏成事实入库</th><th><code>main.py:755</code></th></tr>
+<tr><th><code>search</code></th><th><code>(query, *, user_id, agent_id, run_id, limit, filters)</code></th><th>多信号融合召回</th><th><code>main.py:1369</code></th></tr>
+<tr><th><code>get</code></th><th><code>(memory_id)</code></th><th>按 ID 取单条</th><th><code>main.py</code>（update/delete 附近）</th></tr>
+<tr><th><code>get_all</code></th><th><code>(*, user_id, agent_id, run_id, limit)</code></th><th>列出某作用域全部</th><th><code>main.py</code></th></tr>
+<tr><th><code>update</code></th><th><code>(memory_id, data)</code></th><th>按 ID 手动改（<strong>非 LLM 驱动</strong>）</th><th><code>main.py:1805</code></th></tr>
+<tr><th><code>delete</code></th><th><code>(memory_id)</code></th><th>按 ID 手动删</th><th><code>main.py:1859</code></th></tr>
+<tr><th><code>delete_all</code></th><th><code>(*, user_id, agent_id, run_id)</code></th><th>清空作用域</th><th><code>main.py</code></th></tr>
+<tr><th><code>history</code></th><th><code>(memory_id)</code></th><th>审计日志（ADD/UPDATE/DELETE）</th><th><code>main.py</code></th></tr>
+</table></div>
+<p><strong>关键理解</strong>：<code>update</code>/<code>delete</code> 是<strong>按 ID 的手动操作</strong>，不由 LLM 驱动——这呼应 ADD-only 哲学：写路径只单调累积，改动靠显式人工（m06 详述）。<code>search</code> 的可选参数 <code>explain=True</code> 能逐项拆出 <code>semantic/bm25/entity_boost</code> 分数（<code>scoring.py:127</code>），调试召回质量必备。</p>
+<p><strong>平台客户端对比</strong>：<code>MemoryClient</code>（<code>client/main.py:82</code>）是托管平台的<strong>薄 HTTP 包装</strong>——本地不执行逻辑，全部发到 <code>api.mem0.ai</code>（add → <code>POST /v3/memories/add/</code>，<code>client/main.py:184</code>）。签名同 <code>Memory</code>，但行为是远程。</p>
+<h4>3.3 小结</h4>
+<ul><li>8 个核心方法覆盖完整生命周期：写（add）/ 读（search, get, get_all）/ 改（update）/ 删（delete, delete_all）/ 审计（history）。</li><li><code>update</code>/<code>delete</code> 是手动按 ID，非 LLM 决策——ADD-only 的体现。</li><li><code>Memory</code>（本地 OSS）与 <code>MemoryClient</code>（远程平台）签名镜像，行为完全不同。</li></ul>
+<h4>3.4 课后思考题</h4>
+<ul><li><strong>kp02-03（procedure）</strong>：调试时发现 search 召回了不该出现的记忆，你会用哪两个参数/方法最快定位原因？（提示：一个看分数构成，一个看作用域）</li></ul>
+<hr>
+<h3>章节总结</h3>
+<p><strong>本章心智模型</strong>：mem0 的"环境"由三层构成——<strong>安装</strong>（pip + nlp extra）、<strong>配置</strong>（<code>MemoryConfig</code> 五要素 + Provider 工厂注册）、<strong>API</strong>（8 方法完整生命周期）。理解"换 provider = 换 config 类"这条链，就理解了它的插件架构骨架。</p>
+<p><strong>关键 file:line 索引</strong>：<code>pyproject.toml:15</code>（Python 版本）、<code>configs/base.py:29</code>（MemoryConfig）、<code>utils/factory.py:42</code>（Provider 注册）、<code>main.py:755/1369/1805/1859</code>（核心方法）、<code>client/main.py:82,184</code>（平台客户端）。</p>
+<p><strong>与整体架构的钩子</strong>：这一章的 <code>Memory</code> 实例就是 m03 架构图的主角；<code>update</code>/<code>delete</code> 非 LLM 驱动已经预告了 m06 的 ADD-only 哲学。</p>
+<hr>
+<h3>Cheatsheet（memory 型，参考用）</h3>
+<pre><code>pip install mem0ai           # 核心
+pip install mem0ai[nlp]      # hybrid search 需要
+python -m spacy download en_core_web_sm
+
+# MemoryConfig 五要素
+llm / embedder / vector_store / reranker / history_db_path
+
+# Provider 注册表
+mem0/utils/factory.py:42  →  provider_to_class（LLM 18 / VectorStore 25 / Embedding 11 / Reranker 5）
+
+# 8 方法
+add(messages, user_id=...)  search(query, filters=..., top_k=...)
+get(id)  get_all(user_id=...)  update(id, data)  delete(id)
+delete_all(user_id=...)  history(id)
+search(..., explain=True)  # 看分数构成</code></pre>
+<h3>课后检验记录</h3>
+<blockquote>（课后阶段追加）kp02-01/02/03 → 判定结果 + 引擎返回。</blockquote></div>
+  </div>
+</section>
+<section class="module" id="module-03">
+  <div class="module-content">
+    <div class="module-header">
+      <span class="module-number">03</span>
+      <h2 class="module-title">总体架构心智模型</h2>
+      <p class="module-subtitle">分层 / 存储 / 三入口</p>
+    </div>
+    <div class="screen"><h2>Chapter 3 — 总体架构心智模型（教材式）</h2>
+<blockquote>学习方式：跟随材料逐节学习 → 课后答疑 → 课后检验 → 章节完成（模块级闸门）<br>材料生成: 2026-08-12 | 章节状态: teaching</blockquote>
+<h3>0. 章节导言</h3>
+<p>前两章建立了"是什么 + 怎么跑"。这一章建立<strong>心智模型</strong>：不看具体算法，先看整个系统如何分块、如何依赖、如何存储——这样你就能<strong>预测</strong> mem0 的行为，而不是逐行背代码。三个知识点：分层依赖（kp03-01）、三层存储（kp03-02）、三个入口类（kp03-03）。</p>
+<hr>
+<h3>1. 分层架构与依赖方向（kp03-01）</h3>
+<h4>1.1 学习目标</h4>
+<p>学完你能：画出 mem0 的四层架构图，并说出依赖方向（谁依赖谁、谁不依赖谁）。</p>
+<h4>1.2 讲解 + 源码走读</h4>
+<p><strong>四层架构</strong>：</p>
+<pre><code>┌─────────────────────────────────────────────┐
+│  入口层  Memory / AsyncMemory / MemoryClient │
+│           (main.py / client/main.py)         │
+├─────────────────────────────────────────────┤
+│  配置层  MemoryConfig + configs/&lt;cat&gt;/&lt;prov&gt; │
+│           (configs/base.py + configs/*/)     │
+├─────────────────────────────────────────────┤
+│  Provider层  LLM / Embedder / VectorStore /  │
+│               Reranker  (factory.py 注册)    │
+├─────────────────────────────────────────────┤
+│  存储层  向量库(事实+实体) · SQLite(messages │
+│           + history)                        │
+└─────────────────────────────────────────────┘</code></pre>
+<p><strong>依赖方向</strong>：<strong>自上而下</strong>——入口层持有配置层与 Provider 工厂，Provider 层读写存储层。<strong>关键设计点</strong>：</p>
+<ol><li><strong>入口层与 Provider 解耦</strong>：<code>Memory</code> 不直接 <code>import</code> 某个具体 LLM，而是通过 <code>LlmFactory</code> 按名字解析（<code>factory.py:79-82</code>）——所以换 provider 零业务改动（m02 已验证）。</li><li><strong>配置与实现分离</strong>：<code>MemoryConfig</code> 只声明"要什么"，实际类的实例化由工厂完成（<code>factory.py:42</code>）。</li><li><strong>AsyncMemory 是镜像</strong>：<code>main.py:2156</code> 的 <code>AsyncMemory</code> 与 <code>main.py:482</code> 的 <code>Memory</code> 是<strong>逐方法镜像的孪生类</strong>，异步版用 <code>asyncio.to_thread</code> 包阻塞调用，管线逻辑完全相同——架构不因同步/异步而分叉。</li></ol>
+<p><strong>核心证据</strong>：<code>Memory.__init__</code> 里通过 <code>LlmFactory</code> / <code>EmbedderFactory</code> / <code>VectorStoreFactory</code> 解析 config 中的 provider 名（<code>factory.py</code>），而不是 <code>from mem0.llms.openai import OpenAILLM</code> 直接硬编码。</p>
+<h4>1.3 小结</h4>
+<ul><li>四层：入口 / 配置 / Provider / 存储，依赖自上而下。</li><li>入口层与 Provider 通过工厂解耦——插件架构的骨架。</li><li>同步 <code>Memory</code> 与异步 <code>AsyncMemory</code> 是镜像孪生，不引入两套设计。</li></ul>
+<h4>1.4 课后思考题</h4>
+<ul><li><strong>kp03-01（concept）</strong>：如果让 <code>Memory</code> 直接 import 一个具体 LLM 类，架构上会失去哪两个能力？（提示：扩展性 + 测试性）</li></ul>
+<hr>
+<h3>2. 三层存储模型（kp03-02）</h3>
+<h4>2.1 学习目标</h4>
+<p>学完你能：说清三类存储各存什么、谁可检索、为什么这样分工。</p>
+<h4>2.2 讲解 + 源码走读</h4>
+<pre><code>向量库（可检索）     → 抽取后的事实（主集合） + _entities 实体集合
+SQLite messages      → 原始消息，每会话滚动 10 条，仅供抽取上下文，不可检索
+SQLite history       → ADD/UPDATE/DELETE 审计日志</code></pre>
+<p><strong>分工逻辑</strong>（这是理解 mem0 存储设计的钥匙）：</p>
+<div class="table-wrap"><table>
+<tr><th>存储</th><th>内容</th><th>可检索？</th><th>用途</th><th>证据</th></tr>
+<tr><th>---</th><th>---</th><th>---</th><th>---</th><th>---</th></tr>
+<tr><th><strong>向量库</strong></th><th>蒸馏后的事实 + 实体</th><th>✅</th><th>语义/BM25/实体召回</th><th><code>main.py:982-993</code>（embed）、<code>main.py:1077+</code>（实体）</th></tr>
+<tr><th><strong>SQLite messages</strong></th><th>原始消息滚动 10 条/会话</th><th>❌</th><th>仅供 LLM 抽取时的上下文</th><th><code>storage.py:257</code>（滚动 10 条）</th></tr>
+<tr><th><strong>SQLite history</strong></th><th>ADD/UPDATE/DELETE 审计</th><th>❌</th><th>生命周期审计（<code>history()</code> API）</th><th><code>storage.py:102</code></th></tr>
+</table></div>
+<p><strong>"不存原始对话块"的精确说法</strong>：不是"完全不存原始消息"——原始消息以每会话 10 条滚动窗口存 SQLite（<code>get_last_messages</code> <code>main.py:910</code>），<strong>仅供抽取上下文，不参与检索</strong>。检索面只有向量库里的蒸馏事实。<code>infer=False</code> 时直接存原文是例外。</p>
+<h4>2.3 小结</h4>
+<ul><li>三层存储：可检索的向量库（事实+实体）、不可检索的 messages（抽取上下文）、history（审计）。</li><li>"不存原始对话块"精确含义：原始消息存但不参与检索。</li><li>存储分工 = "什么该被想起"（向量库）vs "什么只是过程"（SQLite）。</li></ul>
+<h4>2.4 课后思考题</h4>
+<ul><li><strong>kp03-02（concept）</strong>：如果让原始消息也可检索（比如全量进向量库），架构上会失去什么、换来什么？</li></ul>
+<hr>
+<h3>3. Memory / AsyncMemory / MemoryClient 的关系与选择（kp03-03）</h3>
+<h4>3.1 学习目标</h4>
+<p>学完你能：说清三个入口类各自定位、何时用哪个、为什么接口镜像。</p>
+<h4>3.2 讲解 + 源码走读</h4>
+<div class="table-wrap"><table>
+<tr><th>类</th><th>定位</th><th>核心区别</th><th>证据</th></tr>
+<tr><th>---</th><th>---</th><th>---</th><th>---</th></tr>
+<tr><th><code>Memory</code></th><th>OSS 自托管（同步）</th><th>本地执行全部管线</th><th><code>main.py:482</code></th></tr>
+<tr><th><code>AsyncMemory</code></th><th>OSS 自托管（异步）</th><th>与 Memory 镜像，<code>to_thread</code> 包阻塞调用</th><th><code>main.py:2156</code></th></tr>
+<tr><th><code>MemoryClient</code></th><th>托管平台（同步）</th><th>薄 HTTP 包装，无本地逻辑</th><th><code>client/main.py:82</code></th></tr>
+<tr><th><code>AsyncMemoryClient</code></th><th>托管平台（异步）</th><th>MemoryClient 的异步镜像</th><th><code>client/main.py:1123</code></th></tr>
+</table></div>
+<p><strong>三句话理解</strong>：</p>
+<ol><li><strong>同步 vs 异步不是两套设计</strong>：<code>AsyncMemory</code> 用 <code>asyncio.to_thread</code> 把 <code>Memory</code> 的阻塞调用丢到线程池，管线逻辑共享（<code>main.py:2156</code> 镜像 <code>main.py:482</code>）。</li><li><strong>OSS vs 平台是两种执行位置</strong>：<code>Memory</code> 在本地跑抽取/检索；<code>MemoryClient</code> 把参数序列化 POST 到 <code>api.mem0.ai</code>（<code>client/main.py:184</code>），本地零逻辑。</li><li><strong>选择判据</strong>：数据能否出境（合规 → OSS <code>Memory</code> + 本地 LLM）；要不要托管运维（省事 → <code>MemoryClient</code>）；写高并发异步场景 → <code>AsyncMemory</code>。</li></ol>
+<p><strong>接口镜像的工程价值</strong>：四个类方法签名一致 → 切换 OSS/平台/同步/异步只改一行 import，业务代码不动。这是"接口稳定 = 可替换性"的教科书案例。</p>
+<h4>3.3 小结</h4>
+<ul><li>四类入口 = 同步/异步 × OSS/平台 的笛卡尔积，接口镜像。</li><li><code>AsyncMemory</code> 用 <code>to_thread</code> 复用 <code>Memory</code> 管线，非重写。</li><li><code>MemoryClient</code> 是薄 HTTP 客户端，不执行任何本地逻辑。</li><li>接口镜像 → 一行切换，可替换性极强。</li></ul>
+<h4>3.4 课后思考题</h4>
+<ul><li><strong>kp03-03（concept）</strong>：一个已有 <code>MemoryClient</code> 的线上服务要迁到 OSS 自托管（数据不能出境），代码层最少改什么？哪些行为会变、哪些不变？</li></ul>
+<hr>
+<h3>章节总结</h3>
+<p><strong>本章心智模型</strong>：mem0 的骨架 = 四层依赖（入口→配置→Provider→存储，自上而下）+ 三层存储（可检索向量库 / 抽取上下文 SQLite / 审计 history）+ 四入口镜像（同步/异步 × OSS/平台）。掌握这三张图，任何 mem0 问题你都能先定位到"哪一层、哪个存储、哪个入口"再深入。</p>
+<p><strong>关键 file:line 索引</strong>：<code>main.py:482</code>（Memory）、<code>main.py:2156</code>（AsyncMemory）、<code>client/main.py:82,1123</code>（平台客户端）、<code>factory.py:42</code>（Provider 注册）、<code>storage.py:102,257</code>（SQLite）。</p>
+<p><strong>与整体架构的钩子</strong>：m04 的 <code>add()</code> 和 m05 的 <code>search()</code> 就是在这个骨架上跑的两条主数据流；m06 的设计哲学解释骨架为什么长这样。</p>
+<hr>
+<h3>Cheatsheet（memory 型，参考用）</h3>
+<pre><code>四层: 入口 → 配置 → Provider(工厂) → 存储     （依赖自上而下）
+三层存储:
+  向量库   = 蒸馏事实 + _entities 实体集合      （可检索）
+  messages = 原始消息滚动10条/会话               （抽取上下文, 不可检索）
+  history  = ADD/UPDATE/DELETE 审计日志
+四入口:
+  Memory / AsyncMemory         OSS 自托管 (同步/异步镜像)
+  MemoryClient / AsyncMemoryClient  托管平台 (薄HTTP包装)
+接口镜像 → 换 OSS/平台/同步/异步只改一行 import</code></pre>
+<h3>课后检验记录</h3>
+<blockquote>（课后阶段追加）kp03-01/02/03 → 判定结果 + 引擎返回。</blockquote></div>
+  </div>
+</section>
+<section class="module" id="module-04">
+  <div class="module-content">
+    <div class="module-header">
+      <span class="module-number">04</span>
+      <h2 class="module-title">写入管线 add()</h2>
+      <p class="module-subtitle">V3 八阶段 · 抽取 · 去重 · 实体</p>
+    </div>
+    <div class="screen"><h2>Chapter 4 — 写入管线 add()（教材式）</h2>
+<blockquote>学习方式：跟随材料逐节学习 → 课后答疑 → 课后检验 → 章节完成（模块级闸门）<br>材料生成: 2026-08-12 | 章节状态: teaching</blockquote>
+<h3>0. 章节导言</h3>
+<p>这是 repo-mastery 的核心价值模块——<strong>关键实现</strong>。m01-03 建立的是"地图"，这一章走进<strong>写路径</strong>：一段对话进来，如何变成几条可检索的持久事实。四个知识点层层递进：8 阶段总览（kp04-01）→ 抽取 + 防幻觉（kp04-02）→ 去重设计（kp04-03）→ 实体链接设计（kp04-04）。</p>
+<p><strong>全景图</strong>：</p>
+<pre><code>对话 → ①作用域校验 → ②取上下文(最近10条) → ③检索已有记忆(top-10, UUID→&quot;0&quot;..&quot;9&quot;)
+    → ④单次LLM抽取(ADD-only, JSON) → ⑤批量embedding → ⑥MD5去重
+    → ⑦批量写向量库 + SQLite记ADD → ⑧实体链接 → 保存消息 + 遥测</code></pre>
+<hr>
+<h3>1. V3 add() 八阶段数据流总览（kp04-01）</h3>
+<h4>1.1 学习目标</h4>
+<p>学完你能：按顺序说出 add() 的 8 个阶段、每阶段的输入输出、哪阶段是唯一的 LLM 调用。</p>
+<h4>1.2 讲解 + 源码走读</h4>
+<p><strong>8 阶段</strong>（<code>main.py:906-1196</code>）：</p>
+<div class="table-wrap"><table>
+<tr><th>#</th><th>阶段</th><th>做什么</th><th>证据</th></tr>
+<tr><th>---</th><th>---</th><th>---</th><th>---</th></tr>
+<tr><th>0</th><th>作用域校验</th><th>剥离身份键防篡改；要求 user/agent/run 至少一个</th><th><code>main.py:807-857</code>, <code>:143</code></th></tr>
+<tr><th>1</th><th>取上下文</th><th>该会话最近 10 条消息（<code>get_last_messages</code>）</th><th><code>main.py:908-911</code></th></tr>
+<tr><th>2</th><th>检索已有记忆</th><th>top-10，真实 UUID 重映射成 <code>"0".."9"</code></th><th><code>main.py:913-928</code></th></tr>
+<tr><th>3</th><th><strong>单次 LLM 抽取</strong></th><th><code>ADDITIVE_EXTRACTION_PROMPT</code> 强制 JSON 输出</th><th><code>main.py:930-959</code></th></tr>
+<tr><th>4</th><th>批量 embedding</th><th>抽取文本 → 向量</th><th><code>main.py:981-993</code></th></tr>
+<tr><th>5</th><th>MD5 精确去重</th><th>对照已存 hash + 批内 set</th><th><code>main.py:995-1033</code></th></tr>
+<tr><th>6</th><th>批量写向量库</th><th>主集合 + SQLite 记 <code>ADD</code> 事件</th><th><code>main.py:1035-1074</code></th></tr>
+<tr><th>7</th><th>实体链接</th><th>spaCy 抽实体 → <code>_entities</code> 集合匹配</th><th><code>main.py:1077-1180</code></th></tr>
+<tr><th>8</th><th>保存消息 + 遥测</th><th>滚动存 10 条；<code>capture_event</code></th><th><code>main.py:1182-1196</code></th></tr>
+</table></div>
+<p><strong>关键设计</strong>：<strong>整个 add 只有一次 LLM 调用（阶段 3）</strong>——无 UPDATE/DELETE 决策。这是 ADD-only 哲学的落地点：写路径单调累积，裁决权全部留给读路径（m06 深挖）。对比旧版（extract + reconcile）每次 add 两次调用且写路径做合并判断，V3 是一次调用 + 纯累积。</p>
+<h4>1.3 小结</h4>
+<ul><li>add() 8 阶段：作用域 → 上下文 → 已有记忆 → <strong>单次抽取</strong> → embed → 去重 → 写入 → 实体链接。</li><li>唯一 LLM 调用在阶段 3，且只做 ADD，不做 UPDATE/DELETE。</li><li>阶段 2 的 UUID 重映射为阶段 3 防幻觉服务（下节详述）。</li></ul>
+<h4>1.4 课后思考题</h4>
+<ul><li><strong>kp04-01（concept）</strong>：V3 相对旧版"extract + reconcile"，把哪个决策从写路径挪走了？挪走后的写路径剩下什么职责？</li></ul>
+<hr>
+<h3>2. 单次 LLM 抽取 + UUID 重映射防幻觉（kp04-02）</h3>
+<h4>2.1 学习目标</h4>
+<p>学完你能：解释抽取 prompt 的契约（输出 JSON 结构）、说明为什么要把已有记忆的 UUID 重映射成整数。</p>
+<h4>2.2 讲解 + 源码走读</h4>
+<p><strong>抽取契约</strong>（<code>configs/prompts.py:468</code> <code>ADDITIVE_EXTRACTION_PROMPT</code>）：</p>
+<pre><code>{
+  &quot;memory&quot;: [
+    {&quot;id&quot;: &quot;0&quot;, &quot;text&quot;: &quot;自包含事实(15-80词)&quot;, &quot;attributed_to&quot;: &quot;user&quot;, &quot;linked_memory_ids&quot;: [&quot;1&quot;]}
+  ]
+}</code></pre>
+<p>关键约束（<code>prompts.py:918-943</code>）：每条事实<strong>自包含</strong>（独立可理解）、15–80 词、可引用已有记忆的 id。<code>attributed_to</code> 记录事实归属（user/assistant），<code>linked_memory_ids</code> 让 LLM 主动关联相关旧记忆。</p>
+<p><strong>UUID → 整数重映射</strong>（<code>main.py:924-928</code>）：</p>
+<pre><code>for idx, mem in enumerate(existing_results):
+    uuid_mapping[str(idx)] = mem.id
+    existing_memories.append({&quot;id&quot;: str(idx), &quot;text&quot;: mem.payload.get(&quot;data&quot;, &quot;&quot;)})</code></pre>
+<p><strong>为什么</strong>：真实 UUID 太长、无规律，LLM 在生成 <code>linked_memory_ids</code> 时<strong>容易幻觉出不存在的 id</strong>。重映射成 <code>"0".."9"</code> 让 LLM 只面对短整数；返回后再用 <code>uuid_mapping</code> 还原真实 id，<strong>幻觉 id 用完即弃，绝不脏写</strong>。这是"给 LLM 一个封闭小词表，防止自由发挥"的工程技巧。</p>
+<p><strong>agent 作用域变体</strong>：当 <code>filters</code> 只有 <code>agent_id</code> 没有 <code>user_id</code> 时（<code>main.py:931</code>），系统 prompt 追加 <code>AGENT_CONTEXT_SUFFIX</code>（<code>prompts.py:947</code>）——以 agent 视角重述事实（"Agent 被告知… / Agent 建议…"），因为 agent 记忆跨用户共享。</p>
+<h4>2.3 小结</h4>
+<ul><li>抽取契约：强制 JSON，每条事实自包含 + 15-80 词 + 可链接旧记忆。</li><li>UUID 重映射成 <code>"0".."9"</code> 防 LLM 幻觉 id；幻觉 id 用完即弃。</li><li>agent 作用域追加视角后缀，事实以 agent 视角重述。</li></ul>
+<h4>2.4 课后思考题</h4>
+<ul><li><strong>kp04-02（concept）</strong>：如果直接用真实 UUID 喂给 LLM 做 <code>linked_memory_ids</code>，最坏情况下会发生什么？（提示：写脏数据 vs 抽取失败两条路径）</li></ul>
+<hr>
+<h3>3. 为什么 MD5 精确去重而非语义去重（kp04-03）</h3>
+<h4>3.1 学习目标</h4>
+<p>学完你能：说出去重的三层防线、解释为什么不用语义相似度做写路径去重。</p>
+<h4>3.2 讲解 + 源码走读</h4>
+<p><strong>三层去重</strong>（从软到硬）：</p>
+<ol><li><strong>Prompt 级软去重</strong>：阶段 3 的 prompt 把已有记忆喂给 LLM（<code>prompts.py:478-549</code>），LLM 看着旧记忆抽取，天然避免重复——<strong>边际成本为零</strong>（旧记忆本来就要进 prompt）。</li><li><strong>MD5 硬去重</strong>：<code>hashlib.md5(text.encode()).hexdigest()</code>（<code>main.py:1010</code>），对照已存 hash 集合（<code>main.py:997-1001</code>）+ 批内 <code>seen_hashes</code> set（<code>main.py:1004,1014</code>）——<strong>确定性兜底</strong>，文本逐字节相同才跳过。</li><li><strong>语义近似留给检索期</strong>：两句"意思相同但文字不同"的记忆不合并，检索期靠融合打分让更相关的排在前面。</li></ol>
+<p><strong>为什么不用语义去重</strong>（这是 design 关键）：</p>
+<ul><li><strong>阈值不可靠</strong>：多少相似算"重复"？0.9？0.95？不同 embedding 模型对同一阈值语义含义不同（脆弱）。</li><li><strong>写路径不可逆</strong>：语义去重必然伴随"合并/删除"，一旦合并就不可逆——违背 ADD-only 原则（m06 详述"错误不可在写路径固化"）。</li><li><strong>成本</strong>：显式 embedding 近邻检查要额外计算；而 prompt 软去重的旧记忆本来就在上下文里。</li></ul>
+<p><strong>证据</strong>：<code>main.py:1010-1014</code> 的 MD5 分支明确 <code>Skipping duplicate memory (hash match)</code>——精确、零语义判断。</p>
+<h4>3.3 小结</h4>
+<ul><li>三层去重：prompt 软去重（免费）→ MD5 硬去重（确定性）→ 语义近似留给检索期。</li><li>不用语义去重的三个理由：阈值不可靠、合并不可逆违背 ADD-only、额外成本。</li><li>去重哲学与 ADD-only 一致：<strong>写路径不做不可逆的裁决</strong>。</li></ul>
+<h4>3.4 课后思考题</h4>
+<ul><li><strong>kp04-03（design）</strong>：如果硬要加语义去重到写路径，你需要额外解决哪两个问题才能不违背 ADD-only？（提示：可逆性 + 阈值稳定性）</li></ul>
+<hr>
+<h3>4. 为什么用实体链接替代图数据库（kp04-04）</h3>
+<h4>4.1 学习目标</h4>
+<p>学完你能：说出实体链接的 5 步流程、解释为什么用轻量 <code>_entities</code> 集合替代 Neo4j 图数据库。</p>
+<h4>4.2 讲解 + 源码走读</h4>
+<p><strong>实体链接流程</strong>（<code>main.py:1077-1180</code>）：</p>
+<pre><code>① 批量抽实体  extract_entities_batch(文本)      （spaCy）
+② 全局去重    归一化实体文本 → 全局实体字典
+③ 批量 embed  唯一实体一次 embed_batch
+④ 检索匹配    精确(文本) 或 语义(score≥0.95) 匹配已存实体
+⑤ 更新/插入  已有实体并集更新 linked_memory_ids；新实体插入 _entities 集合</code></pre>
+<p><strong>关键设计点</strong>：</p>
+<ol><li><strong>批量优于逐个</strong>：实体批量 embed（<code>main.py:1098</code>）、批量 search（<code>main.py:1128</code>）、批量 insert（<code>main.py:1170</code>）——一次 I/O 处理所有实体，避免 N 次往返。</li><li><strong>匹配策略</strong>：精确文本匹配优先（<code>main.py:1124</code> <code>_existing_entities_by_text</code>），无精确命中再语义匹配（<code>main.py:1142</code> <code>score &gt;= 0.95</code>）——确定性优先，语义兜底。</li><li><strong>关联即加分</strong>：实体 payload 存 <code>linked_memory_ids</code>（<code>main.py:1147-1149</code>），检索期据此给关联记忆加分（m05 详述）。</li><li><strong>失败不致命</strong>：整个实体链接包在 try/except（<code>main.py:1179</code>），失败只告警不阻断写入——实体是增强，不是主链路。</li></ol>
+<p><strong>为什么不用图数据库（Neo4j）</strong>（design 关键）：</p>
+<ul><li><strong>运维成本</strong>：图 DB 部署、备份、扩展成本高，OSS 用户大部分用不上。</li><li><strong>价值覆盖</strong>：mem0 需要的只是"实体 → 记忆"这层关联，轻量实体向量集合 + <code>linked_memory_ids</code> 完全覆盖，无需图遍历。</li><li><strong>平台保留</strong>：图 memory（多跳关系推理）是 <strong>Platform-only</strong>（OSS 已移除，提交 #6808）——OSS 保持轻，重能力进付费平台。</li></ul>
+<h4>4.3 小结</h4>
+<ul><li>实体链接 5 步：抽实体 → 全局去重 → 批量 embed → 匹配 → 更新/插入。</li><li>精确匹配优先、语义(≥0.95)兜底；实体关联 = <code>linked_memory_ids</code> 加分。</li><li>实体链接失败只告警不阻断——增强而非主链路。</li><li>用轻量实体集合替代图 DB：运维成本 + 价值覆盖 + OSS 轻量化。</li></ul>
+<h4>4.4 课后思考题</h4>
+<ul><li><strong>kp04-04（design）</strong>：什么场景下"实体 → 记忆"的轻量关联不够用，必须上真正的图数据库？（提示：多跳关系、反查路径）</li></ul>
+<hr>
+<h3>章节总结</h3>
+<p><strong>本章心智模型</strong>：add() 是一条"<strong>蒸馏 + 累积</strong>"管线——8 阶段把对话变成事实，全程只有一次 LLM 调用，且只 ADD 不裁决。三个设计支柱：<strong>防幻觉</strong>（UUID 重映射）、<strong>防重复</strong>（prompt 软去重 + MD5 硬去重）、<strong>增关联</strong>（实体链接）。每个支柱都指向同一个哲学：写路径尽量简单、确定、可逆，复杂度留给读路径。</p>
+<p><strong>关键 file:line 索引</strong>：<code>main.py:906-1196</code>（8 阶段）、<code>:924-928</code>（UUID 重映射）、<code>:930-959</code>（LLM 抽取）、<code>:997-1014</code>（MD5 去重）、<code>:1077-1180</code>（实体链接）、<code>prompts.py:468</code>（抽取 prompt）、<code>:947</code>（agent 后缀）。</p>
+<p><strong>与整体架构的钩子</strong>：add() 写的 <code>linked_memory_ids</code> 是 m05 search() 实体加分的直接输入；"写路径不裁决"直接预告 m06 的 ADD-only 哲学。</p>
+<hr>
+<h3>Cheatsheet（memory 型，参考用）</h3>
+<pre><code>add() 8阶段: 作用域 → 上下文(10条) → 已有记忆(top10, UUID→&quot;0&quot;..&quot;9&quot;)
+          → 单次LLM抽取(JSON) → embed → MD5去重 → 批量写 → 实体链接
+
+抽取契约: {&quot;memory&quot;:[{id, text(15-80词自包含), attributed_to, linked_memory_ids}]}
+
+三层去重: prompt软去重(免费) → MD5硬去重(main.py:1010) → 语义留检索期
+
+实体链接: 抽实体 → 去重 → 批量embed → 精确/语义(≥0.95)匹配 → 更新/插入
+          失败只告警, 不阻断(main.py:1179)</code></pre>
+<h3>课后检验记录</h3>
+<blockquote>（课后阶段追加）kp04-01/02/03/04 → 判定结果 + 引擎返回。</blockquote></div>
+  </div>
+</section>
+<section class="module" id="module-05">
+  <div class="module-content">
+    <div class="module-header">
+      <span class="module-number">05</span>
+      <h2 class="module-title">检索管线 search()</h2>
+      <p class="module-subtitle">多信号融合 · threshold · 实体加分</p>
+    </div>
+    <div class="screen"><h2>Chapter 5 — 检索管线 search()（教材式）</h2>
+<blockquote>学习方式：跟随材料逐节学习 → 课后答疑 → 课后检验 → 章节完成（模块级闸门）<br>材料生成: 2026-08-12 | 章节状态: teaching</blockquote>
+<h3>0. 章节导言</h3>
+<p>m04 讲了"记忆怎么进来"，这一章讲<strong>记忆怎么被想起</strong>——<code>search()</code> 的读路径。这是 mem0 相对裸向量库的核心差异区：<strong>多信号融合</strong>。四个知识点：数据流总览（kp05-01）→ 融合公式 + threshold（kp05-02）→ 为什么是加性融合而非 RRF（kp05-03）→ 实体加分 + explain（kp05-04）。</p>
+<p><strong>全景图</strong>：</p>
+<pre><code>query → ①词形还原+实体抽取 → ②embed → ③语义检索(over-fetch max(limit×4,60))
+      → ④关键词检索+BM25 sigmoid归一 → ⑤实体加分
+      → ⑥候选集(去过期) → ⑦score_and_rank 加性融合 → ⑧threshold先滤semantic → top_k → 可选rerank</code></pre>
+<hr>
+<h3>1. search() 检索数据流（kp05-01）</h3>
+<h4>1.1 学习目标</h4>
+<p>学完你能：按顺序说出 search() 的 8 个步骤、每步输入输出、为什么先 over-fetch 再融合。</p>
+<h4>1.2 讲解 + 源码走读</h4>
+<p><strong>8 步骤</strong>（<code>main.py:1618-1685</code>）：</p>
+<div class="table-wrap"><table>
+<tr><th>#</th><th>步骤</th><th>做什么</th><th>证据</th></tr>
+<tr><th>---</th><th>---</th><th>---</th><th>---</th></tr>
+<tr><th>1</th><th>预处理 query</th><th>词形还原（供 BM25）+ 实体抽取</th><th><code>main.py:1624-1625</code></th></tr>
+<tr><th>2</th><th>embed query</th><th>query → 向量</th><th><code>main.py:1628</code></th></tr>
+<tr><th>3</th><th>语义检索</th><th><strong>over-fetch</strong> <code>max(limit×4, 60)</code> 候选池</th><th><code>main.py:1631-1634</code></th></tr>
+<tr><th>4</th><th>关键词检索</th><th><code>keyword_search</code>（如向量库支持）</th><th><code>main.py:1637-1639</code></th></tr>
+<tr><th>5</th><th>BM25 归一</th><th>sigmoid 按查询长度自适应</th><th><code>main.py:1642-1649</code></th></tr>
+<tr><th>6</th><th>实体加分</th><th><code>_compute_entity_boosts</code></th><th><code>main.py:1651-1654</code></th></tr>
+<tr><th>7</th><th>候选集</th><th>过滤过期记忆</th><th><code>main.py:1656-1667</code></th></tr>
+<tr><th>8</th><th>融合排序</th><th><code>score_and_rank</code> → top_k</th><th><code>main.py:1669-1685</code></th></tr>
+</table></div>
+<p><strong>关键设计——over-fetch</strong>：语义检索先拉 <code>max(limit×4, 60)</code> 个候选（<code>main.py:1631</code>），再做 BM25/实体打分融合，最后裁剪到 top_k。<strong>为什么</strong>：单靠语义 top-k 会漏掉"语义分略低但 BM25/实体强命中"的记忆；over-fetch 扩大了评分池，融合才有效。代价是召回池膨胀（m06 的 ADD-only 代价之一）。</p>
+<h4>1.3 小结</h4>
+<ul><li>search() 8 步：预处理 → embed → over-fetch 语义 → 关键词 → BM25 归一 → 实体加分 → 候选 → 融合。</li><li>over-fetch（limit×4，≥60）扩大评分池，融合后才裁剪到 top_k。</li><li>预处理同时做词形还原（BM25）与实体抽取（实体加分）。</li></ul>
+<h4>1.4 课后思考题</h4>
+<ul><li><strong>kp05-01（concept）</strong>：如果把 over-fetch 去掉，直接语义 top_k 后融合，会漏掉哪类记忆？举一个具体场景。</li></ul>
+<hr>
+<h3>2. 加性融合打分公式与 threshold 门控（kp05-02）</h3>
+<h4>2.1 学习目标</h4>
+<p>学完你能：默写融合公式、解释 max_possible 自适应、说清 threshold 先作用于哪个分数。</p>
+<h4>2.2 讲解 + 源码走读</h4>
+<p><strong>融合公式</strong>（<code>scoring.py:60-139</code>）：</p>
+<pre><code>raw_combined = semantic_score + bm25_score + entity_boost
+combined = min(raw_combined / max_possible, 1.0)</code></pre>
+<p><strong>max_possible 自适应</strong>（<code>scoring.py:97-101</code>）：</p>
+<div class="table-wrap"><table>
+<tr><th>激活信号</th><th>max_possible</th></tr>
+<tr><th>---</th><th>---</th></tr>
+<tr><th>仅语义</th><th>1.0</th></tr>
+<tr><th>语义 + BM25</th><th>2.0</th></tr>
+<tr><th>语义 + 实体</th><th>1.5</th></tr>
+<tr><th>语义 + BM25 + 实体</th><th>2.5</th></tr>
+</table></div>
+<p><strong>为什么自适应</strong>：不同信号激活时分数量纲不同——不除以总可能最大值，激活信号多的候选天然分高（不公平）；归一后各信号组合可比。</p>
+<p><strong>threshold 门控</strong>（<code>scoring.py:111</code>）：</p>
+<pre><code>if semantic_score &lt; threshold:
+    continue    # 直接丢弃，即使 BM25/实体能抬升</code></pre>
+<p><strong>关键理解</strong>：threshold 先作用于<strong>语义分</strong>再融合——语义分低于阈值的候选<strong>直接丢弃</strong>，不给 BM25/实体"救回来"的机会。这是质量底线：语义完全不相关的记忆，光靠关键词/实体命中不该进上下文。</p>
+<h4>2.3 小结</h4>
+<ul><li><code>combined = min((semantic + bm25 + entity_boost)/max_possible, 1.0)</code>。</li><li>max_possible 按激活信号数自适应（1.0/2.0/1.5/2.5），保证跨组合可比。</li><li>threshold 先滤语义分——语义不相关就丢弃，BM25/实体不兜底。</li></ul>
+<h4>2.4 课后思考题</h4>
+<ul><li><strong>kp05-02（concept）</strong>：一条记忆语义分 0.09、BM25 归一 0.9、实体加分 0.4，threshold=0.1 时最终结果是什么？如果把 threshold 挪到融合之后，会发生什么变化？</li></ul>
+<hr>
+<h3>3. 为什么是加性融合而非 RRF（kp05-03）</h3>
+<h4>3.1 学习目标</h4>
+<p>学完你能：说清 RRF 与加性融合的本质区别、解释 mem0 为什么选加性融合。</p>
+<h4>3.2 讲解 + 源码走读</h4>
+<p><strong>两种融合方式</strong>：</p>
+<div class="table-wrap"><table>
+<tr><th></th><th>RRF（Reciprocal Rank Fusion）</th><th>mem0 加性融合</th></tr>
+<tr><th>---</th><th>---</th><th>---</th></tr>
+<tr><th>依据</th><th><strong>排名</strong>：<code>Σ 1/(k + rank_i)</code></th><th><strong>分数</strong>：<code>(sem + bm25 + entity)/max_possible</code></th></tr>
+<tr><th>输入</th><th>各检索器的 top-k 排名</th><th>各信号已归一分数</th></tr>
+<tr><th>分数尺度</th><th>可不比较（排名即可）</th><th>必须可比较（需归一）</th></tr>
+<tr><th>可解释性</th><th>差（分数无直接含义）</th><th>好（<code>explain=True</code> 逐项拆出）</th></tr>
+<tr><th>可调参</th><th>弱</th><th>强（权重、threshold、BM25 参数）</th></tr>
+</table></div>
+<p><strong>为什么 mem0 选加性融合</strong>（design 关键）：</p>
+<ol><li><strong>分数本身有意义</strong>：mem0 的 semantic/bm25/entity 都归一到 [0,1]，量纲可比 → 直接相加是合理近似；RRF 丢弃了分数信息，只用排名。</li><li><strong>可解释可调试</strong>：<code>explain=True</code> 能逐项拆出每个信号贡献（<code>scoring.py:127</code>）——RRF 做不到，出了问题无法定位。</li><li><strong>设计一致性</strong>：融合公式、BM25 sigmoid 参数、实体加分权重都是显式可调的（<code>scoring.py:57</code> <code>ENTITY_BOOST_WEIGHT=0.5</code>）——整个读路径是"白盒打分"，符合"memory is retrieval"的哲学。</li></ol>
+<p><strong>RRF 何时更合适</strong>：异构检索器分数尺度<strong>不可比</strong>时（比如混合了语义 + 布尔检索 + 个性化排序），排名融合更鲁棒。</p>
+<h4>3.3 小结</h4>
+<ul><li>RRF 用排名融合，加性融合用分数融合——本质是"丢弃 vs 保留分数信息"。</li><li>mem0 选加性融合：分数可解释、可调参、与白盒哲学一致。</li><li>RRF 适合分数尺度不可比的异构检索器。</li></ul>
+<h4>3.4 课后思考题</h4>
+<ul><li><strong>kp05-03（design）</strong>：如果某向量库的 semantic 分数和 BM25 分数量纲不可比（比如一个 [0,1] 一个 [0,50]），mem0 的加性融合会怎么失败？要如何改造才仍能用加性融合？</li></ul>
+<hr>
+<h3>4. 实体加分机制与 explain 可解释性（kp05-04）</h3>
+<h4>4.1 学习目标</h4>
+<p>学完你能：复述实体加分的公式与直觉、说明 explain 如何帮助调试。</p>
+<h4>4.2 讲解 + 源码走读</h4>
+<p><strong>实体加分</strong>（<code>main.py:1723-1803</code> <code>_compute_entity_boosts</code>）：</p>
+<pre><code>query 实体 → embed → 实体库搜索(threshold≥0.5)
+对每个命中实体:
+  boost = similarity × ENTITY_BOOST_WEIGHT(0.5) × memory_count_weight
+  memory_count_weight = 1 / (1 + 0.001 × (n_linked - 1)²)
+  对每个 linked_memory: boosts[id] = max(boosts.get(id,0), boost)</code></pre>
+<p><strong>设计直觉</strong>：</p>
+<ol><li><strong><code>ENTITY_BOOST_WEIGHT=0.5</code></strong>（<code>scoring.py:57</code>）：实体只是<strong>增强信号</strong>，加分封顶 0.5，不能让实体命中压过语义主分。</li><li><strong><code>memory_count_weight</code> 降权</strong>：一个实体关联的记忆越多（<code>n_linked</code> 大），单个记忆分到的加分越小（<code>main.py:1792</code>）——避免"常见实体"把一堆记忆全抬上去（稀释效应）。</li><li><strong><code>max</code> 取最大值</strong>：同一记忆被多个实体命中，取最大的 boost（<code>main.py:1798</code>），不叠加——防止堆叠失衡。</li><li><strong>并发</strong>：多个实体的实体库搜索用 <code>ThreadPoolExecutor(max_workers=4)</code>（<code>main.py:1768</code>）并行。</li></ol>
+<p><strong>explain 可解释性</strong>（<code>scoring.py:126-135</code>）：<code>explain=True</code> 时每个结果带 <code>score_details</code>：</p>
+<pre><code>{&quot;semantic_score&quot;: 0.7, &quot;bm25_score&quot;: 0.4, &quot;entity_boost&quot;: 0.2,
+ &quot;raw_score&quot;: 1.3, &quot;max_possible_score&quot;: 2.5, &quot;final_score&quot;: 0.52, &quot;threshold&quot;: 0.1}</code></pre>
+<p><strong>调试价值</strong>：一条记忆为什么排第 3？看 <code>score_details</code> 就知道是语义弱还是 BM25 没命中还是实体没加分——把黑盒打分变成可归因。</p>
+<h4>4.3 小结</h4>
+<ul><li>实体加分 = similarity × 0.5 × 记忆数降权，封顶 [0, 0.5]；<code>max</code> 去重不叠加。</li><li>降权直觉：关联越多分越少，避免常见实体稀释。</li><li><code>explain=True</code> 逐项拆出 semantic/bm25/entity/raw/final/threshold——白盒可归因。</li></ul>
+<h4>4.4 课后思考题</h4>
+<ul><li><strong>kp05-04（design）</strong>：如果去掉 <code>memory_count_weight</code>，一个被 100 条记忆关联的实体命中 query 时会发生什么？为什么这有危害？</li></ul>
+<hr>
+<h3>章节总结</h3>
+<p><strong>本章心智模型</strong>：search() 是一条"<strong>扩大再融合</strong>"的管线——over-fetch 扩大候选池，然后语义 + BM25 + 实体三信号<strong>加性融合</strong>，threshold 先卡语义质量底线。核心哲学是<strong>白盒打分</strong>：分数可解释（explain）、可调参（权重/阈值/BM25 参数）、可归因（每项贡献可见）。这不是 RRF 的黑盒排名，是显式的分数决策。</p>
+<p><strong>关键 file:line 索引</strong>：<code>main.py:1618-1685</code>（8 步数据流）、<code>:1631</code>（over-fetch）、<code>:1723-1803</code>（实体加分）、<code>scoring.py:60-139</code>（融合公式）、<code>:97-101</code>（max_possible 自适应）、<code>:111</code>（threshold 门控）、<code>:57</code>（ENTITY_BOOST_WEIGHT）、<code>:126-135</code>（explain）。</p>
+<p><strong>与整体架构的钩子</strong>：search() 消费 add() 写的 <code>linked_memory_ids</code> 做实体加分；"读路径反复打分裁决"正是 m06 ADD-only 哲学的镜像。</p>
+<hr>
+<h3>Cheatsheet（memory 型，参考用）</h3>
+<pre><code>search() 8步: 预处理 → embed → over-fetch(max(limit×4,60)) → 关键词
+           → BM25 sigmoid归一 → 实体加分 → 候选(滤过期) → 融合 top_k
+
+融合公式: combined = min((sem + bm25 + entity)/max_possible, 1.0)
+max_possible: 语义1.0 / +BM25 2.0 / +实体 1.5 / 双加 2.5
+threshold: 先滤 semantic 分再融合 (scoring.py:111)
+
+实体加分: sim × 0.5 × 1/(1+0.001×(n_linked-1)²), 封顶[0,0.5], max去重
+explain=True → score_details 逐项可归因</code></pre>
+<h3>课后检验记录</h3>
+<blockquote>（课后阶段追加）kp05-01/02/03/04 → 判定结果 + 引擎返回。</blockquote></div>
+  </div>
+</section>
+<section class="module" id="module-06">
+  <div class="module-content">
+    <div class="module-header">
+      <span class="module-number">06</span>
+      <h2 class="module-title">设计哲学与权衡</h2>
+      <p class="module-subtitle">ADD-only · 代价 · 平台分界</p>
+    </div>
+    <div class="screen"><h2>Chapter 6 — 设计哲学与权衡（教材式）</h2>
+<blockquote>学习方式：跟随材料逐节学习 → 课后答疑 → 课后检验 → 章节完成（模块级闸门）<br>材料生成: 2026-08-12 | 章节状态: teaching</blockquote>
+<h3>0. 章节导言</h3>
+<p>这是<strong>深水区</strong>。m04/m05 回答了"怎么实现"，这一章回答"<strong>为什么这么设计</strong>"——反直觉的地方往往藏着最有价值的决策。四个知识点：为什么 ADD-only（kp06-01）→ ADD-only 的代价与边界（kp06-02）→ 平台 vs OSS 分界（kp06-03）→ 隐私/成本/合规边界（kp06-04）。</p>
+<blockquote>学完这一章，你将能从"mem0 怎么跑"升级到"mem0 为什么这么跑，以及它的边界在哪"——这是面试和选型中最具区分度的能力。</blockquote>
+<hr>
+<h3>1. 为什么 ADD-only（kp06-01）</h3>
+<h4>1.1 学习目标</h4>
+<p>学完你能：解释 ADD-only 的动机（为什么写路径不裁决）、对比旧版设计的失败点。</p>
+<h4>1.2 讲解 + 源码走读</h4>
+<p><strong>核心主张</strong>：写路径只做<strong>单调累积</strong>（ADD），把"哪些记忆有效、哪些过期、哪些矛盾"的裁决权全部留给读路径反复打分。</p>
+<p><strong>为什么（旧版教训）</strong>：旧版 <code>extract + reconcile</code> 让 LLM 在<strong>信息不充分</strong>的状态下做一次性合并/删除判断——它只看到本次对话 + 少量旧记忆，却要决定"这条旧记忆该不该删"。<strong>错误在写入期被不可逆固化</strong>：一旦 LLM 误删一条有用记忆，它永远找不回来。且每次 add 两次调用（extract + reconcile），贵。</p>
+<p><strong>V3 的转变</strong>：</p>
+<pre><code>旧版: 写路径 = LLM抽取 + LLM合并/删除裁决   （两次LLM调用，错误不可逆）
+V3:   写路径 = LLM抽取(仅ADD)               （一次LLM调用，错误可逆）
+      裁决 → 读路径反复打分（哪个进上下文由 query 决定）</code></pre>
+<p><strong>哲学</strong>："<strong>memory is retrieval, not storage</strong>"——记忆的价值在检索时兑现，不在写入时拍板。<code>main.py:930-959</code> 的抽取 prompt 只输出要新增的事实，无 UPDATE/DELETE 决策。</p>
+<p><strong>代码证据</strong>：<code>add()</code> 里没有任何"根据旧记忆改写/删除"的调用；<code>update</code>/<code>delete</code> 是<strong>按 ID 的手动操作</strong>（<code>main.py:1805,1859</code>），不由 LLM 驱动。</p>
+<h4>1.3 小结</h4>
+<ul><li>ADD-only = 写路径只单调累积，裁决权移给读路径。</li><li>旧版痛点：写路径在信息不充分时做不可逆合并/删除，误删找不回 + 两次调用贵。</li><li>哲学："memory is retrieval, not storage"。</li></ul>
+<h4>1.4 课后思考题</h4>
+<ul><li><strong>kp06-01（design）</strong>：ADD-only 把"矛盾事实消解"从写路径挪走，换来的是哪个确定的收益？请用"不可逆性"解释。</li></ul>
+<hr>
+<h3>2. ADD-only 的代价与边界（kp06-02）</h3>
+<h4>2.1 学习目标</h4>
+<p>学完你能：诚实列出 ADD-only 的 4 个代价、说出哪些是 OSS 无法自行解决的。</p>
+<h4>2.2 讲解 + 源码走读</h4>
+<p><strong>代价清单</strong>（设计诚实性——面试加分项）：</p>
+<div class="table-wrap"><table>
+<tr><th>代价</th><th>表现</th><th>缓解手段</th></tr>
+<tr><th>---</th><th>---</th><th>---</th></tr>
+<tr><th><strong>无内置冲突消解</strong></th><th>矛盾事实并存（"喜欢 Rust"与"改喜欢 Go"都在库），OSS 无机制保证挑对</th><th>读路径靠分数排挤；平台有 temporal scoring + Dream 合并</th></tr>
+<tr><th><strong>无时间衰减</strong></th><th><code>reference_date</code> 在 OSS <code>search()</code> 直接抛错（<code>main.py:1422</code>）</th><th>平台有；OSS 需自建</th></tr>
+<tr><th><strong>库只增不减</strong></th><th>累积 + over-fetch 候选膨胀，检索成本上升</th><th>定期人工合并；平台 Dream 自动化</th></tr>
+<tr><th><strong>召回过时版本风险</strong></th><th>"改主意"后旧事实仍可能被召回</th><th>分数排挤 + 时间衰减（平台）</th></tr>
+</table></div>
+<p><strong>关键认识</strong>：这些不是 bug，是 ADD-only 的<strong>固有代价</strong>——换取"错误不在写路径固化"。诚实承认边界，比假装系统完美更有说服力（面试红线：不要伪装系统无缺）。</p>
+<p><strong>代码证据</strong>：<code>main.py:1411-1422</code> 明确 <code>reference_date (Any, optional): Platform-only temporal parameter. Not supported in OSS.</code> 并抛错。</p>
+<h4>2.3 小结</h4>
+<ul><li>四个代价：无冲突消解、无时间衰减、库只增不减、召回过时版本。</li><li>代价换取的是"写路径不固化错误"这个核心收益。</li><li>有些代价 OSS 无法自行解决（时间衰减），是平台的差异化空间。</li></ul>
+<h4>2.4 课后思考题</h4>
+<ul><li><strong>kp06-02（design）</strong>：用户"改主意"后，旧记忆仍然可被召回。请设计一个不破坏 ADD-only 的缓解方案（提示：时间戳 + 读路径过滤 vs 写路径合并，选哪个？）。</li></ul>
+<hr>
+<h3>3. 平台 vs OSS 的功能分界（kp06-03）</h3>
+<h4>3.1 学习目标</h4>
+<p>学完你能：说清 OSS 与平台各提供什么、哪些能力是平台独有、为什么。</p>
+<h4>3.2 讲解 + 源码走读</h4>
+<p><strong>分界总览</strong>：</p>
+<div class="table-wrap"><table>
+<tr><th>能力</th><th>OSS</th><th>Platform</th></tr>
+<tr><th>---</th><th>---</th><th>---</th></tr>
+<tr><th>纯 ADD-only 管线</th><th>✅</th><th>✅</th></tr>
+<tr><th><code>reference_date</code> / 时间衰减</th><th>❌（抛错 <code>main.py:1422</code>）</th><th>✅（temporal scoring）</th></tr>
+<tr><th><code>latest_only</code></th><th>❌</th><th>✅</th></tr>
+<tr><th>Dream 记忆合并</th><th>❌</th><th>✅（pi-agent-plugin 配置 <code>minHours:24 / minSessions:5 / minMemories:20</code>）</th></tr>
+<tr><th>图 memory（多跳关系）</th><th>❌（已移除 #6808）</th><th>✅（付费）</th></tr>
+<tr><th>托管运维</th><th>❌</th><th>✅</th></tr>
+</table></div>
+<p><strong>为什么这样分</strong>：</p>
+<ol><li><strong>复杂度归属</strong>：时间推理（bi-temporal）、图遍历、自动合并都是<strong>高复杂度</strong>能力——塞进 OSS 会大幅增加维护面与使用门槛。OSS 保持"轻 + 可自托管"，重能力进付费平台（商业逻辑 + 复杂度管理双重合理）。</li><li><strong>图 memory 移出 OSS 的教训</strong>：图 DB 运维贵、OSS 用户用不上；轻量实体链接（m04）覆盖主要价值，图推理留给平台（<code>#6808</code> 提交）。</li><li><strong>生态策略</strong>：OSS 是引流入口（上手快、可自托管），平台是变现与深度能力的所在地——两者是同一产品的两个出口。</li></ol>
+<h4>3.3 小结</h4>
+<ul><li>平台独有：时间衰减 / temporal scoring / <code>latest_only</code> / Dream 合并 / 图 memory。</li><li>分界逻辑：高复杂度能力进平台，OSS 保持轻量可自托管。</li><li>图 memory 已从 OSS 移除（#6808）——讲 OSS 架构时别提 Neo4j。</li></ul>
+<h4>3.4 课后思考题</h4>
+<ul><li><strong>kp06-03（design）</strong>：如果你维护一个 OSS 项目，什么条件下会把一个能力从 OSS 移进付费版？（提示：维护成本 + 用户覆盖面 + 商业合理性）</li></ul>
+<hr>
+<h3>4. 隐私/成本/合规边界（kp06-04）</h3>
+<h4>4.1 学习目标</h4>
+<p>学完你能：说出 mem0 的隐私模型、成本结构、以及选型时的合规考量。</p>
+<h4>4.2 讲解 + 源码走读</h4>
+<p><strong>隐私</strong>：</p>
+<ul><li><strong>数据要发给 LLM</strong>：抽取（<code>main.py:946-959</code>）与召回打分都依赖 LLM/embedding，文本会发送给 provider。</li><li><strong>缓解</strong>：OSS 自托管 + 本地 LLM（Ollama 等，18 个 provider）→ 数据不出域（<code>factory.py</code>）；这是 OSS 相对平台的核心卖点。</li><li><strong>写路径 PII 脱敏</strong>：平台有脱敏机制，OSS 需自建。</li></ul>
+<p><strong>成本</strong>：</p>
+<ul><li><strong>写路径是主要 LLM 成本</strong>：每次 add 一次抽取调用；<code>infer=False</code> 可完全跳过 LLM（直接存原文，牺牲抽取）。</li><li><strong>读路径是延迟敏感点</strong>：over-fetch（<code>main.py:1631</code>）+ 融合计算，<code>top_k</code> 与阈值决定裁剪；读频率远高于写，延迟更敏感。</li><li><strong>向量库/存储成本</strong>：库只增不减（ADD-only 代价），需定期合并控制规模。</li></ul>
+<p><strong>合规决策链</strong>：</p>
+<ol><li>数据能否出境？否 → OSS + 本地 LLM。</li><li>存储是否需自持？是 → OSS 自托管向量库（25 个选择）。</li><li>成本敏感？→ 控写频率 / <code>infer=False</code> / 本地模型。</li></ol>
+<h4>4.3 小结</h4>
+<ul><li>隐私：数据发 LLM 是常态；OSS + 本地 LLM = 数据不出域。</li><li>成本：写路径烧 LLM token，读路径重延迟；<code>infer=False</code> 是跳过 LLM 的开关。</li><li>合规决策链：数据出境？→ 存储自持？→ 成本敏感？层层收窄。</li></ul>
+<h4>4.4 课后思考题</h4>
+<ul><li><strong>kp06-04（design）</strong>：一个金融客服产品要长期记忆用户偏好，但合规要求数据不出内网。请用平台/OSS 分界 + 成本结构，给出完整架构选择与理由。</li></ul>
+<hr>
+<h3>章节总结</h3>
+<p><strong>本章心智模型</strong>：mem0 的全部设计都围绕一个核心取舍——<strong>写路径简单确定、读路径裁决</strong>（ADD-only）。这带来四个固有代价（冲突/时间/膨胀/过时），平台用 temporal scoring + Dream 补齐，OSS 靠"诚实承认 + 轻量自托管"立足。选型时先回答三个问题：要不要写路径蒸馏？数据出不出域？要不要时间推理？——答案指向 mem0 / Zep / 自建 RAG。</p>
+<p><strong>关键 file:line 索引</strong>：<code>main.py:906-1196</code>（ADD-only 管线）、<code>:1411-1422</code>（reference_date 拒绝）、<code>:1805,1859</code>（手动 update/delete）、<code>prompts.py:468</code>（抽取只 ADD）、<code>factory.py</code>（本地 LLM 能力）。</p>
+<p><strong>与整体架构的钩子</strong>：这一章把 m04（写路径）和 m05（读路径）串成一条哲学主线——"写单调累积、读反复裁决"；m07 的"自研 vs 集成"决策链直接建在这章的成本/合规分析上。</p>
+<hr>
+<h3>Cheatsheet（memory 型，参考用）</h3>
+<pre><code>ADD-only: 写路径只单调累积, 裁决权给读路径
+  动机: 写路径信息不充分时的裁决不可逆(误删找不回) + 两次调用贵
+  哲学: &quot;memory is retrieval, not storage&quot;
+
+4个代价: 无冲突消解 / 无时间衰减(reference_date抛错 main.py:1422)
+         / 库只增不减 / 召回过时版本
+
+平台独有: temporal scoring / latest_only / Dream(minHours24,minSessions5,minMemories20)
+          / 图memory(#6808移出OSS)
+
+隐私: 数据发LLM; OSS+本地LLM=数据不出域
+成本: 写=LLM token; 读=延迟; infer=False跳过LLM</code></pre>
+<h3>课后检验记录</h3>
+<blockquote>（课后阶段追加）kp06-01/02/03/04 → 判定结果 + 引擎返回。</blockquote></div>
+  </div>
+</section>
+<section class="module" id="module-07">
+  <div class="module-content">
+    <div class="module-header">
+      <span class="module-number">07</span>
+      <h2 class="module-title">动手实验与决策链</h2>
+      <p class="module-subtitle">demo 实跑 · 自研 vs 集成</p>
+    </div>
+    <div class="screen"><h2>Chapter 7 — 动手实验与决策链（教材式）</h2>
+<blockquote>学习方式：跟随材料逐节学习 → 课后答疑 → 课后检验 → 章节完成（模块级闸门）<br>材料生成: 2026-08-12 | 章节状态: teaching</blockquote>
+<h3>0. 章节导言</h3>
+<p>前面六章完成了从"是什么"到"为什么"的认知闭环。这一章把它<strong>落地</strong>：亲手跑一个 add/search demo（kp07-01），再把六章的认知收束成"何时自研 vs 何时集成"的决策链（kp07-02）。这是把"理解"变成"判断力"的一章。</p>
+<hr>
+<h3>1. 用 OSS 搭建可运行的 add/search demo（kp07-01）</h3>
+<h4>1.1 学习目标</h4>
+<p>学完你能：从零搭一个可运行的 mem0 demo，解释每条关键配置，并验证 ADD-only 与融合打分的行为。</p>
+<h4>1.2 讲解 + 源码走读</h4>
+<p><strong>准备环境</strong>（读路径依赖本地 LLM 时用 Ollama）：</p>
+<pre><code>pip install mem0ai[nlp]
+python -m spacy download en_core_web_sm
+# 可选: 本地 LLM + embedding
+ollama pull llama3
+ollama pull nomic-embed-text</code></pre>
+<p><strong>demo 1 — 最简 add/search</strong>（验证数据流，走 OpenAI 默认）：</p>
+<pre><code>from mem0 import Memory
+m = Memory()
+
+# 写入：蒸馏成事实
+m.add([
+    {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;我叫张三，喜欢 Rust 和系统编程，最近在读操作系统源码&quot;},
+    {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;好的，已经记住了！&quot;}
+], user_id=&quot;demo&quot;)
+
+# 检索：explain 看分数构成
+r = m.search(&quot;张三的编程偏好&quot;, user_id=&quot;demo&quot;, top_k=3, explain=True)
+for item in r[&quot;results&quot;]:
+    print(item[&quot;memory&quot;], &quot;→&quot;, item.get(&quot;score_details&quot;, {}).get(&quot;final_score&quot;))</code></pre>
+<p><strong>预期观察</strong>：返回的是<strong>抽取后的事实</strong>（不是原始对话句），且 <code>score_details</code> 里有 <code>semantic/bm25/entity</code> 各项——这就是 m04/m05 讲的管线在真实运行。</p>
+<p><strong>demo 2 — 验证 ADD-only 行为</strong>（本地 LLM，数据不出域）：</p>
+<pre><code>from mem0 import Memory
+from mem0.configs.base import MemoryConfig
+from mem0.configs.llms.ollama import OllamaConfig
+from mem0.configs.embeddings.ollama import OllamaConfig as EmbCfg
+from mem0.configs.vector_stores.chroma import ChromaConfig
+
+config = MemoryConfig(
+    llm=OllamaConfig(model=&quot;llama3&quot;),
+    embedder=EmbCfg(model=&quot;nomic-embed-text&quot;),
+    vector_store=ChromaConfig(),
+)
+m = Memory.from_config(config)</code></pre>
+<p><strong>动手验证清单</strong>（每项对应课程知识点）：</p>
+<ol><li>add 两次同一句话 → MD5 去重生效（m04-03），第二次不产生重复记忆。</li><li>search 一段完全无关的话 → threshold 过滤（m05-02），返回空或极少。</li><li><code>explain=True</code> → 看到三项分数构成（m05-04）。</li><li>改一句"改主意"的话 → 新旧事实并存（m06-02），验证 ADD-only 无冲突消解。</li></ol>
+<h4>1.3 小结</h4>
+<ul><li>最简 demo = <code>Memory()</code> + <code>add</code> + <code>search(explain=True)</code>，走默认 OpenAI。</li><li>本地 demo = 换 Ollama LLM/embedding + Chroma 向量库，数据不出域。</li><li>动手验证清单对应 m04/m05/m06 核心结论，是"看得见的证据"。</li></ul>
+<h4>1.4 课后思考题</h4>
+<ul><li><strong>kp07-01（procedure）</strong>：demo 2 的 <code>ChromaConfig()</code> 换成 <code>QdrantConfig(host=..., port=...)</code> 需要改几行？这验证了架构的哪个特性？（提示：m02 的工厂注册）</li></ul>
+<hr>
+<h3>2. 自研 vs 集成 mem0 的决策链（kp07-02）</h3>
+<h4>2.1 学习目标</h4>
+<p>学完你能：面对任意"要不要用 mem0"的场景，走出一条有依据的决策链，而非拍脑袋。</p>
+<h4>2.2 讲解 + 源码走读</h4>
+<p><strong>核心分界</strong>：<strong>要不要在写路径做 LLM 蒸馏？</strong></p>
+<pre><code>要不要写路径LLM蒸馏？
+├── 不要（只要文本相似）→ 裸向量库 + 自写 RAG
+│     理由: mem0 的写路径成本（LLM token、抽取延迟）对你的需求是纯开销
+├── 要，标准事实场景 → 集成 mem0
+│     理由: 写路径抽取 + 多信号召回 + 隔离 + 生命周期，全都现成
+├── 要，强领域结构 → fork mem0 OSS 深度定制
+│     理由: 替换 prompt（configs/prompts.py）/ 融合权重（scoring.py）/ 存储
+│           ——比从零自研划算得多
+└── 从零自研只在&quot;连骨架都要重写&quot;时</code></pre>
+<p><strong>附加判据</strong>（m06 的边界落地）：</p>
+<div class="table-wrap"><table>
+<tr><th>问题</th><th>指向</th></tr>
+<tr><th>---</th><th>---</th></tr>
+<tr><th>数据能出境吗？</th><th>否 → OSS + 本地 LLM（Ollama）</th></tr>
+<tr><th>召回需求是文本相似还是事实级？</th><th>事实级 → mem0；文本级 → 向量库</th></tr>
+<tr><th>要生命周期/多租户隔离吗？</th><th>要 → mem0 内置；不要 → 可省</th></tr>
+<tr><th>成本敏感？</th><th>每次 add 烧 LLM token → 控频率 / <code>infer=False</code></th></tr>
+<tr><th>要时间推理/矛盾消解吗？</th><th>要 → 考虑 Zep（m01-03）</th></tr>
+</table></div>
+<p><strong>代码证据</strong>：<code>configs/prompts.py:468</code>（替换抽取 prompt 的入口）、<code>utils/scoring.py:57,97-101</code>（调融合权重/自适应）、<code>utils/factory.py:42</code>（换存储）。</p>
+<h4>2.3 小结</h4>
+<ul><li>决策链第一问：<strong>要不要写路径 LLM 蒸馏</strong>——答案分叉到裸向量库 / 集成 / fork / 自研。</li><li>附加判据：出境、召回粒度、生命周期、成本、时间推理。</li><li>fork 比自研划算：替换点都在 configs/prompts/scoring/factory，骨架可复用。</li></ul>
+<h4>2.4 课后思考题</h4>
+<ul><li><strong>kp07-02（design）</strong>：你的团队已经有一个裸向量库 RAG 在跑文档问答，现在要加"记住用户偏好"功能。用决策链分析：是扩展现有 RAG、集成 mem0、还是 fork mem0？给出完整推理。</li></ul>
+<hr>
+<h3>章节总结</h3>
+<p><strong>本章心智模型</strong>：把六章认知收束成一句选型格言——<strong>"要不要写路径 LLM 蒸馏"决定架构边界，数据出境决定 OSS/平台，时间推理决定 mem0/Zep</strong>。动手实验证明的不只是"能跑"，更是 m04/m05/m06 的设计判断在真实数据上成立。</p>
+<p><strong>关键 file:line 索引</strong>：<code>configs/prompts.py:468</code>（定制抽取）、<code>utils/scoring.py:57,97-101</code>（调融合）、<code>utils/factory.py:42</code>（换存储）。</p>
+<p><strong>课程收束</strong>：到这里，你已走完 mem0 的完整认知闭环——定位（m01）→ 运行（m02）→ 骨架（m03）→ 写路径（m04）→ 读路径（m05）→ 哲学（m06）→ 决策（m07）。回到 m01 那句话，你现在能用自己的话解释它的每一层含义。</p>
+<hr>
+<h3>Cheatsheet（memory 型，参考用）</h3>
+<pre><code>决策链: 要不要写路径LLM蒸馏?
+  不要 → 裸向量库+自写RAG
+  要+标准 → 集成 mem0
+  要+强领域 → fork mem0 OSS（改 prompts.py / scoring.py / factory.py）
+  连骨架都要重写 → 才自研
+
+附加判据: 出境?(OSS+本地LLM) / 事实级vs文本级 / 生命周期? / 成本? / 时间推理?(Zep)
+
+demo 验证清单: ①MD5去重 ②threshold过滤 ③explain三项分数 ④改主意新旧并存</code></pre>
+<h3>课后检验记录</h3>
+<blockquote>（课后阶段追加）kp07-01/02 → 判定结果 + 引擎返回。</blockquote></div>
+  </div>
+</section>
+  </main>
+</body>
+</html>

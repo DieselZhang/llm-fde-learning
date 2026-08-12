@@ -1,0 +1,114 @@
+<section class="module" id="module-04">
+  <div class="module-content">
+    <div class="module-header">
+      <span class="module-number">04</span>
+      <h2 class="module-title">写入管线 add()</h2>
+      <p class="module-subtitle">V3 八阶段 · 抽取 · 去重 · 实体</p>
+    </div>
+    <div class="screen"><h2>Chapter 4 — 写入管线 add()（教材式）</h2>
+<blockquote>学习方式：跟随材料逐节学习 → 课后答疑 → 课后检验 → 章节完成（模块级闸门）<br>材料生成: 2026-08-12 | 章节状态: teaching</blockquote>
+<h3>0. 章节导言</h3>
+<p>这是 repo-mastery 的核心价值模块——<strong>关键实现</strong>。m01-03 建立的是"地图"，这一章走进<strong>写路径</strong>：一段对话进来，如何变成几条可检索的持久事实。四个知识点层层递进：8 阶段总览（kp04-01）→ 抽取 + 防幻觉（kp04-02）→ 去重设计（kp04-03）→ 实体链接设计（kp04-04）。</p>
+<p><strong>全景图</strong>：</p>
+<pre><code>对话 → ①作用域校验 → ②取上下文(最近10条) → ③检索已有记忆(top-10, UUID→&quot;0&quot;..&quot;9&quot;)
+    → ④单次LLM抽取(ADD-only, JSON) → ⑤批量embedding → ⑥MD5去重
+    → ⑦批量写向量库 + SQLite记ADD → ⑧实体链接 → 保存消息 + 遥测</code></pre>
+<hr>
+<h3>1. V3 add() 八阶段数据流总览（kp04-01）</h3>
+<h4>1.1 学习目标</h4>
+<p>学完你能：按顺序说出 add() 的 8 个阶段、每阶段的输入输出、哪阶段是唯一的 LLM 调用。</p>
+<h4>1.2 讲解 + 源码走读</h4>
+<p><strong>8 阶段</strong>（<code>main.py:906-1196</code>）：</p>
+<div class="table-wrap"><table>
+<tr><th>#</th><th>阶段</th><th>做什么</th><th>证据</th></tr>
+<tr><th>---</th><th>---</th><th>---</th><th>---</th></tr>
+<tr><th>0</th><th>作用域校验</th><th>剥离身份键防篡改；要求 user/agent/run 至少一个</th><th><code>main.py:807-857</code>, <code>:143</code></th></tr>
+<tr><th>1</th><th>取上下文</th><th>该会话最近 10 条消息（<code>get_last_messages</code>）</th><th><code>main.py:908-911</code></th></tr>
+<tr><th>2</th><th>检索已有记忆</th><th>top-10，真实 UUID 重映射成 <code>"0".."9"</code></th><th><code>main.py:913-928</code></th></tr>
+<tr><th>3</th><th><strong>单次 LLM 抽取</strong></th><th><code>ADDITIVE_EXTRACTION_PROMPT</code> 强制 JSON 输出</th><th><code>main.py:930-959</code></th></tr>
+<tr><th>4</th><th>批量 embedding</th><th>抽取文本 → 向量</th><th><code>main.py:981-993</code></th></tr>
+<tr><th>5</th><th>MD5 精确去重</th><th>对照已存 hash + 批内 set</th><th><code>main.py:995-1033</code></th></tr>
+<tr><th>6</th><th>批量写向量库</th><th>主集合 + SQLite 记 <code>ADD</code> 事件</th><th><code>main.py:1035-1074</code></th></tr>
+<tr><th>7</th><th>实体链接</th><th>spaCy 抽实体 → <code>_entities</code> 集合匹配</th><th><code>main.py:1077-1180</code></th></tr>
+<tr><th>8</th><th>保存消息 + 遥测</th><th>滚动存 10 条；<code>capture_event</code></th><th><code>main.py:1182-1196</code></th></tr>
+</table></div>
+<p><strong>关键设计</strong>：<strong>整个 add 只有一次 LLM 调用（阶段 3）</strong>——无 UPDATE/DELETE 决策。这是 ADD-only 哲学的落地点：写路径单调累积，裁决权全部留给读路径（m06 深挖）。对比旧版（extract + reconcile）每次 add 两次调用且写路径做合并判断，V3 是一次调用 + 纯累积。</p>
+<h4>1.3 小结</h4>
+<ul><li>add() 8 阶段：作用域 → 上下文 → 已有记忆 → <strong>单次抽取</strong> → embed → 去重 → 写入 → 实体链接。</li><li>唯一 LLM 调用在阶段 3，且只做 ADD，不做 UPDATE/DELETE。</li><li>阶段 2 的 UUID 重映射为阶段 3 防幻觉服务（下节详述）。</li></ul>
+<h4>1.4 课后思考题</h4>
+<ul><li><strong>kp04-01（concept）</strong>：V3 相对旧版"extract + reconcile"，把哪个决策从写路径挪走了？挪走后的写路径剩下什么职责？</li></ul>
+<hr>
+<h3>2. 单次 LLM 抽取 + UUID 重映射防幻觉（kp04-02）</h3>
+<h4>2.1 学习目标</h4>
+<p>学完你能：解释抽取 prompt 的契约（输出 JSON 结构）、说明为什么要把已有记忆的 UUID 重映射成整数。</p>
+<h4>2.2 讲解 + 源码走读</h4>
+<p><strong>抽取契约</strong>（<code>configs/prompts.py:468</code> <code>ADDITIVE_EXTRACTION_PROMPT</code>）：</p>
+<pre><code>{
+  &quot;memory&quot;: [
+    {&quot;id&quot;: &quot;0&quot;, &quot;text&quot;: &quot;自包含事实(15-80词)&quot;, &quot;attributed_to&quot;: &quot;user&quot;, &quot;linked_memory_ids&quot;: [&quot;1&quot;]}
+  ]
+}</code></pre>
+<p>关键约束（<code>prompts.py:918-943</code>）：每条事实<strong>自包含</strong>（独立可理解）、15–80 词、可引用已有记忆的 id。<code>attributed_to</code> 记录事实归属（user/assistant），<code>linked_memory_ids</code> 让 LLM 主动关联相关旧记忆。</p>
+<p><strong>UUID → 整数重映射</strong>（<code>main.py:924-928</code>）：</p>
+<pre><code>for idx, mem in enumerate(existing_results):
+    uuid_mapping[str(idx)] = mem.id
+    existing_memories.append({&quot;id&quot;: str(idx), &quot;text&quot;: mem.payload.get(&quot;data&quot;, &quot;&quot;)})</code></pre>
+<p><strong>为什么</strong>：真实 UUID 太长、无规律，LLM 在生成 <code>linked_memory_ids</code> 时<strong>容易幻觉出不存在的 id</strong>。重映射成 <code>"0".."9"</code> 让 LLM 只面对短整数；返回后再用 <code>uuid_mapping</code> 还原真实 id，<strong>幻觉 id 用完即弃，绝不脏写</strong>。这是"给 LLM 一个封闭小词表，防止自由发挥"的工程技巧。</p>
+<p><strong>agent 作用域变体</strong>：当 <code>filters</code> 只有 <code>agent_id</code> 没有 <code>user_id</code> 时（<code>main.py:931</code>），系统 prompt 追加 <code>AGENT_CONTEXT_SUFFIX</code>（<code>prompts.py:947</code>）——以 agent 视角重述事实（"Agent 被告知… / Agent 建议…"），因为 agent 记忆跨用户共享。</p>
+<h4>2.3 小结</h4>
+<ul><li>抽取契约：强制 JSON，每条事实自包含 + 15-80 词 + 可链接旧记忆。</li><li>UUID 重映射成 <code>"0".."9"</code> 防 LLM 幻觉 id；幻觉 id 用完即弃。</li><li>agent 作用域追加视角后缀，事实以 agent 视角重述。</li></ul>
+<h4>2.4 课后思考题</h4>
+<ul><li><strong>kp04-02（concept）</strong>：如果直接用真实 UUID 喂给 LLM 做 <code>linked_memory_ids</code>，最坏情况下会发生什么？（提示：写脏数据 vs 抽取失败两条路径）</li></ul>
+<hr>
+<h3>3. 为什么 MD5 精确去重而非语义去重（kp04-03）</h3>
+<h4>3.1 学习目标</h4>
+<p>学完你能：说出去重的三层防线、解释为什么不用语义相似度做写路径去重。</p>
+<h4>3.2 讲解 + 源码走读</h4>
+<p><strong>三层去重</strong>（从软到硬）：</p>
+<ol><li><strong>Prompt 级软去重</strong>：阶段 3 的 prompt 把已有记忆喂给 LLM（<code>prompts.py:478-549</code>），LLM 看着旧记忆抽取，天然避免重复——<strong>边际成本为零</strong>（旧记忆本来就要进 prompt）。</li><li><strong>MD5 硬去重</strong>：<code>hashlib.md5(text.encode()).hexdigest()</code>（<code>main.py:1010</code>），对照已存 hash 集合（<code>main.py:997-1001</code>）+ 批内 <code>seen_hashes</code> set（<code>main.py:1004,1014</code>）——<strong>确定性兜底</strong>，文本逐字节相同才跳过。</li><li><strong>语义近似留给检索期</strong>：两句"意思相同但文字不同"的记忆不合并，检索期靠融合打分让更相关的排在前面。</li></ol>
+<p><strong>为什么不用语义去重</strong>（这是 design 关键）：</p>
+<ul><li><strong>阈值不可靠</strong>：多少相似算"重复"？0.9？0.95？不同 embedding 模型对同一阈值语义含义不同（脆弱）。</li><li><strong>写路径不可逆</strong>：语义去重必然伴随"合并/删除"，一旦合并就不可逆——违背 ADD-only 原则（m06 详述"错误不可在写路径固化"）。</li><li><strong>成本</strong>：显式 embedding 近邻检查要额外计算；而 prompt 软去重的旧记忆本来就在上下文里。</li></ul>
+<p><strong>证据</strong>：<code>main.py:1010-1014</code> 的 MD5 分支明确 <code>Skipping duplicate memory (hash match)</code>——精确、零语义判断。</p>
+<h4>3.3 小结</h4>
+<ul><li>三层去重：prompt 软去重（免费）→ MD5 硬去重（确定性）→ 语义近似留给检索期。</li><li>不用语义去重的三个理由：阈值不可靠、合并不可逆违背 ADD-only、额外成本。</li><li>去重哲学与 ADD-only 一致：<strong>写路径不做不可逆的裁决</strong>。</li></ul>
+<h4>3.4 课后思考题</h4>
+<ul><li><strong>kp04-03（design）</strong>：如果硬要加语义去重到写路径，你需要额外解决哪两个问题才能不违背 ADD-only？（提示：可逆性 + 阈值稳定性）</li></ul>
+<hr>
+<h3>4. 为什么用实体链接替代图数据库（kp04-04）</h3>
+<h4>4.1 学习目标</h4>
+<p>学完你能：说出实体链接的 5 步流程、解释为什么用轻量 <code>_entities</code> 集合替代 Neo4j 图数据库。</p>
+<h4>4.2 讲解 + 源码走读</h4>
+<p><strong>实体链接流程</strong>（<code>main.py:1077-1180</code>）：</p>
+<pre><code>① 批量抽实体  extract_entities_batch(文本)      （spaCy）
+② 全局去重    归一化实体文本 → 全局实体字典
+③ 批量 embed  唯一实体一次 embed_batch
+④ 检索匹配    精确(文本) 或 语义(score≥0.95) 匹配已存实体
+⑤ 更新/插入  已有实体并集更新 linked_memory_ids；新实体插入 _entities 集合</code></pre>
+<p><strong>关键设计点</strong>：</p>
+<ol><li><strong>批量优于逐个</strong>：实体批量 embed（<code>main.py:1098</code>）、批量 search（<code>main.py:1128</code>）、批量 insert（<code>main.py:1170</code>）——一次 I/O 处理所有实体，避免 N 次往返。</li><li><strong>匹配策略</strong>：精确文本匹配优先（<code>main.py:1124</code> <code>_existing_entities_by_text</code>），无精确命中再语义匹配（<code>main.py:1142</code> <code>score &gt;= 0.95</code>）——确定性优先，语义兜底。</li><li><strong>关联即加分</strong>：实体 payload 存 <code>linked_memory_ids</code>（<code>main.py:1147-1149</code>），检索期据此给关联记忆加分（m05 详述）。</li><li><strong>失败不致命</strong>：整个实体链接包在 try/except（<code>main.py:1179</code>），失败只告警不阻断写入——实体是增强，不是主链路。</li></ol>
+<p><strong>为什么不用图数据库（Neo4j）</strong>（design 关键）：</p>
+<ul><li><strong>运维成本</strong>：图 DB 部署、备份、扩展成本高，OSS 用户大部分用不上。</li><li><strong>价值覆盖</strong>：mem0 需要的只是"实体 → 记忆"这层关联，轻量实体向量集合 + <code>linked_memory_ids</code> 完全覆盖，无需图遍历。</li><li><strong>平台保留</strong>：图 memory（多跳关系推理）是 <strong>Platform-only</strong>（OSS 已移除，提交 #6808）——OSS 保持轻，重能力进付费平台。</li></ul>
+<h4>4.3 小结</h4>
+<ul><li>实体链接 5 步：抽实体 → 全局去重 → 批量 embed → 匹配 → 更新/插入。</li><li>精确匹配优先、语义(≥0.95)兜底；实体关联 = <code>linked_memory_ids</code> 加分。</li><li>实体链接失败只告警不阻断——增强而非主链路。</li><li>用轻量实体集合替代图 DB：运维成本 + 价值覆盖 + OSS 轻量化。</li></ul>
+<h4>4.4 课后思考题</h4>
+<ul><li><strong>kp04-04（design）</strong>：什么场景下"实体 → 记忆"的轻量关联不够用，必须上真正的图数据库？（提示：多跳关系、反查路径）</li></ul>
+<hr>
+<h3>章节总结</h3>
+<p><strong>本章心智模型</strong>：add() 是一条"<strong>蒸馏 + 累积</strong>"管线——8 阶段把对话变成事实，全程只有一次 LLM 调用，且只 ADD 不裁决。三个设计支柱：<strong>防幻觉</strong>（UUID 重映射）、<strong>防重复</strong>（prompt 软去重 + MD5 硬去重）、<strong>增关联</strong>（实体链接）。每个支柱都指向同一个哲学：写路径尽量简单、确定、可逆，复杂度留给读路径。</p>
+<p><strong>关键 file:line 索引</strong>：<code>main.py:906-1196</code>（8 阶段）、<code>:924-928</code>（UUID 重映射）、<code>:930-959</code>（LLM 抽取）、<code>:997-1014</code>（MD5 去重）、<code>:1077-1180</code>（实体链接）、<code>prompts.py:468</code>（抽取 prompt）、<code>:947</code>（agent 后缀）。</p>
+<p><strong>与整体架构的钩子</strong>：add() 写的 <code>linked_memory_ids</code> 是 m05 search() 实体加分的直接输入；"写路径不裁决"直接预告 m06 的 ADD-only 哲学。</p>
+<hr>
+<h3>Cheatsheet（memory 型，参考用）</h3>
+<pre><code>add() 8阶段: 作用域 → 上下文(10条) → 已有记忆(top10, UUID→&quot;0&quot;..&quot;9&quot;)
+          → 单次LLM抽取(JSON) → embed → MD5去重 → 批量写 → 实体链接
+
+抽取契约: {&quot;memory&quot;:[{id, text(15-80词自包含), attributed_to, linked_memory_ids}]}
+
+三层去重: prompt软去重(免费) → MD5硬去重(main.py:1010) → 语义留检索期
+
+实体链接: 抽实体 → 去重 → 批量embed → 精确/语义(≥0.95)匹配 → 更新/插入
+          失败只告警, 不阻断(main.py:1179)</code></pre>
+<h3>课后检验记录</h3>
+<blockquote>（课后阶段追加）kp04-01/02/03/04 → 判定结果 + 引擎返回。</blockquote></div>
+  </div>
+</section>

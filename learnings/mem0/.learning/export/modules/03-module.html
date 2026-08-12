@@ -1,0 +1,98 @@
+<section class="module" id="module-03">
+  <div class="module-content">
+    <div class="module-header">
+      <span class="module-number">03</span>
+      <h2 class="module-title">总体架构心智模型</h2>
+      <p class="module-subtitle">分层 / 存储 / 三入口</p>
+    </div>
+    <div class="screen"><h2>Chapter 3 — 总体架构心智模型（教材式）</h2>
+<blockquote>学习方式：跟随材料逐节学习 → 课后答疑 → 课后检验 → 章节完成（模块级闸门）<br>材料生成: 2026-08-12 | 章节状态: teaching</blockquote>
+<h3>0. 章节导言</h3>
+<p>前两章建立了"是什么 + 怎么跑"。这一章建立<strong>心智模型</strong>：不看具体算法，先看整个系统如何分块、如何依赖、如何存储——这样你就能<strong>预测</strong> mem0 的行为，而不是逐行背代码。三个知识点：分层依赖（kp03-01）、三层存储（kp03-02）、三个入口类（kp03-03）。</p>
+<hr>
+<h3>1. 分层架构与依赖方向（kp03-01）</h3>
+<h4>1.1 学习目标</h4>
+<p>学完你能：画出 mem0 的四层架构图，并说出依赖方向（谁依赖谁、谁不依赖谁）。</p>
+<h4>1.2 讲解 + 源码走读</h4>
+<p><strong>四层架构</strong>：</p>
+<pre><code>┌─────────────────────────────────────────────┐
+│  入口层  Memory / AsyncMemory / MemoryClient │
+│           (main.py / client/main.py)         │
+├─────────────────────────────────────────────┤
+│  配置层  MemoryConfig + configs/&lt;cat&gt;/&lt;prov&gt; │
+│           (configs/base.py + configs/*/)     │
+├─────────────────────────────────────────────┤
+│  Provider层  LLM / Embedder / VectorStore /  │
+│               Reranker  (factory.py 注册)    │
+├─────────────────────────────────────────────┤
+│  存储层  向量库(事实+实体) · SQLite(messages │
+│           + history)                        │
+└─────────────────────────────────────────────┘</code></pre>
+<p><strong>依赖方向</strong>：<strong>自上而下</strong>——入口层持有配置层与 Provider 工厂，Provider 层读写存储层。<strong>关键设计点</strong>：</p>
+<ol><li><strong>入口层与 Provider 解耦</strong>：<code>Memory</code> 不直接 <code>import</code> 某个具体 LLM，而是通过 <code>LlmFactory</code> 按名字解析（<code>factory.py:79-82</code>）——所以换 provider 零业务改动（m02 已验证）。</li><li><strong>配置与实现分离</strong>：<code>MemoryConfig</code> 只声明"要什么"，实际类的实例化由工厂完成（<code>factory.py:42</code>）。</li><li><strong>AsyncMemory 是镜像</strong>：<code>main.py:2156</code> 的 <code>AsyncMemory</code> 与 <code>main.py:482</code> 的 <code>Memory</code> 是<strong>逐方法镜像的孪生类</strong>，异步版用 <code>asyncio.to_thread</code> 包阻塞调用，管线逻辑完全相同——架构不因同步/异步而分叉。</li></ol>
+<p><strong>核心证据</strong>：<code>Memory.__init__</code> 里通过 <code>LlmFactory</code> / <code>EmbedderFactory</code> / <code>VectorStoreFactory</code> 解析 config 中的 provider 名（<code>factory.py</code>），而不是 <code>from mem0.llms.openai import OpenAILLM</code> 直接硬编码。</p>
+<h4>1.3 小结</h4>
+<ul><li>四层：入口 / 配置 / Provider / 存储，依赖自上而下。</li><li>入口层与 Provider 通过工厂解耦——插件架构的骨架。</li><li>同步 <code>Memory</code> 与异步 <code>AsyncMemory</code> 是镜像孪生，不引入两套设计。</li></ul>
+<h4>1.4 课后思考题</h4>
+<ul><li><strong>kp03-01（concept）</strong>：如果让 <code>Memory</code> 直接 import 一个具体 LLM 类，架构上会失去哪两个能力？（提示：扩展性 + 测试性）</li></ul>
+<hr>
+<h3>2. 三层存储模型（kp03-02）</h3>
+<h4>2.1 学习目标</h4>
+<p>学完你能：说清三类存储各存什么、谁可检索、为什么这样分工。</p>
+<h4>2.2 讲解 + 源码走读</h4>
+<pre><code>向量库（可检索）     → 抽取后的事实（主集合） + _entities 实体集合
+SQLite messages      → 原始消息，每会话滚动 10 条，仅供抽取上下文，不可检索
+SQLite history       → ADD/UPDATE/DELETE 审计日志</code></pre>
+<p><strong>分工逻辑</strong>（这是理解 mem0 存储设计的钥匙）：</p>
+<div class="table-wrap"><table>
+<tr><th>存储</th><th>内容</th><th>可检索？</th><th>用途</th><th>证据</th></tr>
+<tr><th>---</th><th>---</th><th>---</th><th>---</th><th>---</th></tr>
+<tr><th><strong>向量库</strong></th><th>蒸馏后的事实 + 实体</th><th>✅</th><th>语义/BM25/实体召回</th><th><code>main.py:982-993</code>（embed）、<code>main.py:1077+</code>（实体）</th></tr>
+<tr><th><strong>SQLite messages</strong></th><th>原始消息滚动 10 条/会话</th><th>❌</th><th>仅供 LLM 抽取时的上下文</th><th><code>storage.py:257</code>（滚动 10 条）</th></tr>
+<tr><th><strong>SQLite history</strong></th><th>ADD/UPDATE/DELETE 审计</th><th>❌</th><th>生命周期审计（<code>history()</code> API）</th><th><code>storage.py:102</code></th></tr>
+</table></div>
+<p><strong>"不存原始对话块"的精确说法</strong>：不是"完全不存原始消息"——原始消息以每会话 10 条滚动窗口存 SQLite（<code>get_last_messages</code> <code>main.py:910</code>），<strong>仅供抽取上下文，不参与检索</strong>。检索面只有向量库里的蒸馏事实。<code>infer=False</code> 时直接存原文是例外。</p>
+<h4>2.3 小结</h4>
+<ul><li>三层存储：可检索的向量库（事实+实体）、不可检索的 messages（抽取上下文）、history（审计）。</li><li>"不存原始对话块"精确含义：原始消息存但不参与检索。</li><li>存储分工 = "什么该被想起"（向量库）vs "什么只是过程"（SQLite）。</li></ul>
+<h4>2.4 课后思考题</h4>
+<ul><li><strong>kp03-02（concept）</strong>：如果让原始消息也可检索（比如全量进向量库），架构上会失去什么、换来什么？</li></ul>
+<hr>
+<h3>3. Memory / AsyncMemory / MemoryClient 的关系与选择（kp03-03）</h3>
+<h4>3.1 学习目标</h4>
+<p>学完你能：说清三个入口类各自定位、何时用哪个、为什么接口镜像。</p>
+<h4>3.2 讲解 + 源码走读</h4>
+<div class="table-wrap"><table>
+<tr><th>类</th><th>定位</th><th>核心区别</th><th>证据</th></tr>
+<tr><th>---</th><th>---</th><th>---</th><th>---</th></tr>
+<tr><th><code>Memory</code></th><th>OSS 自托管（同步）</th><th>本地执行全部管线</th><th><code>main.py:482</code></th></tr>
+<tr><th><code>AsyncMemory</code></th><th>OSS 自托管（异步）</th><th>与 Memory 镜像，<code>to_thread</code> 包阻塞调用</th><th><code>main.py:2156</code></th></tr>
+<tr><th><code>MemoryClient</code></th><th>托管平台（同步）</th><th>薄 HTTP 包装，无本地逻辑</th><th><code>client/main.py:82</code></th></tr>
+<tr><th><code>AsyncMemoryClient</code></th><th>托管平台（异步）</th><th>MemoryClient 的异步镜像</th><th><code>client/main.py:1123</code></th></tr>
+</table></div>
+<p><strong>三句话理解</strong>：</p>
+<ol><li><strong>同步 vs 异步不是两套设计</strong>：<code>AsyncMemory</code> 用 <code>asyncio.to_thread</code> 把 <code>Memory</code> 的阻塞调用丢到线程池，管线逻辑共享（<code>main.py:2156</code> 镜像 <code>main.py:482</code>）。</li><li><strong>OSS vs 平台是两种执行位置</strong>：<code>Memory</code> 在本地跑抽取/检索；<code>MemoryClient</code> 把参数序列化 POST 到 <code>api.mem0.ai</code>（<code>client/main.py:184</code>），本地零逻辑。</li><li><strong>选择判据</strong>：数据能否出境（合规 → OSS <code>Memory</code> + 本地 LLM）；要不要托管运维（省事 → <code>MemoryClient</code>）；写高并发异步场景 → <code>AsyncMemory</code>。</li></ol>
+<p><strong>接口镜像的工程价值</strong>：四个类方法签名一致 → 切换 OSS/平台/同步/异步只改一行 import，业务代码不动。这是"接口稳定 = 可替换性"的教科书案例。</p>
+<h4>3.3 小结</h4>
+<ul><li>四类入口 = 同步/异步 × OSS/平台 的笛卡尔积，接口镜像。</li><li><code>AsyncMemory</code> 用 <code>to_thread</code> 复用 <code>Memory</code> 管线，非重写。</li><li><code>MemoryClient</code> 是薄 HTTP 客户端，不执行任何本地逻辑。</li><li>接口镜像 → 一行切换，可替换性极强。</li></ul>
+<h4>3.4 课后思考题</h4>
+<ul><li><strong>kp03-03（concept）</strong>：一个已有 <code>MemoryClient</code> 的线上服务要迁到 OSS 自托管（数据不能出境），代码层最少改什么？哪些行为会变、哪些不变？</li></ul>
+<hr>
+<h3>章节总结</h3>
+<p><strong>本章心智模型</strong>：mem0 的骨架 = 四层依赖（入口→配置→Provider→存储，自上而下）+ 三层存储（可检索向量库 / 抽取上下文 SQLite / 审计 history）+ 四入口镜像（同步/异步 × OSS/平台）。掌握这三张图，任何 mem0 问题你都能先定位到"哪一层、哪个存储、哪个入口"再深入。</p>
+<p><strong>关键 file:line 索引</strong>：<code>main.py:482</code>（Memory）、<code>main.py:2156</code>（AsyncMemory）、<code>client/main.py:82,1123</code>（平台客户端）、<code>factory.py:42</code>（Provider 注册）、<code>storage.py:102,257</code>（SQLite）。</p>
+<p><strong>与整体架构的钩子</strong>：m04 的 <code>add()</code> 和 m05 的 <code>search()</code> 就是在这个骨架上跑的两条主数据流；m06 的设计哲学解释骨架为什么长这样。</p>
+<hr>
+<h3>Cheatsheet（memory 型，参考用）</h3>
+<pre><code>四层: 入口 → 配置 → Provider(工厂) → 存储     （依赖自上而下）
+三层存储:
+  向量库   = 蒸馏事实 + _entities 实体集合      （可检索）
+  messages = 原始消息滚动10条/会话               （抽取上下文, 不可检索）
+  history  = ADD/UPDATE/DELETE 审计日志
+四入口:
+  Memory / AsyncMemory         OSS 自托管 (同步/异步镜像)
+  MemoryClient / AsyncMemoryClient  托管平台 (薄HTTP包装)
+接口镜像 → 换 OSS/平台/同步/异步只改一行 import</code></pre>
+<h3>课后检验记录</h3>
+<blockquote>（课后阶段追加）kp03-01/02/03 → 判定结果 + 引擎返回。</blockquote></div>
+  </div>
+</section>

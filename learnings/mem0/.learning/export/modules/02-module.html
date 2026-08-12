@@ -1,0 +1,132 @@
+<section class="module" id="module-02">
+  <div class="module-content">
+    <div class="module-header">
+      <span class="module-number">02</span>
+      <h2 class="module-title">构建与环境</h2>
+      <p class="module-subtitle">装起来、配好、用起来</p>
+    </div>
+    <div class="screen"><h2>Chapter 2 — 构建与环境（教材式）</h2>
+<blockquote>学习方式：跟随材料逐节学习 → 课后答疑 → 课后检验 → 章节完成（模块级闸门）<br>材料生成: 2026-08-12 | 章节状态: teaching</blockquote>
+<h3>0. 章节导言</h3>
+<p>上一章建立了"mem0 是什么"的框架。这一章把抽象落地：把它<strong>跑起来</strong>（kp02-01）、<strong>配好</strong>（kp02-02）、<strong>用起来</strong>（kp02-03）。信任感从这里建立——后面的 add/search 数据流讲解，你可以在一个真实实例上反复验证。</p>
+<hr>
+<h3>1. 源码构建与运行 mem0 SDK（kp02-01）</h3>
+<h4>1.1 学习目标</h4>
+<p>学完你能：从零安装 mem0，写一个能 add/search 的最小程序并解释每个关键参数。</p>
+<h4>1.2 讲解 + 源码走读</h4>
+<p><strong>安装</strong>（README <code>[src]</code>）：</p>
+<pre><code>pip install mem0ai                          # 核心 SDK
+pip install mem0ai[nlp]                     # + spaCy 实体抽取（hybrid search 需要）
+python -m spacy download en_core_web_sm     # + 实体抽取模型</code></pre>
+<p><strong>依赖契约</strong>：<code>pyproject.toml:15</code> <code>requires-python = "&gt;=3.10,&lt;4.0"</code>。LLM 默认 <code>gpt-5-mini</code>、embedding 默认 <code>text-embedding-3-small</code>（README <code>[src]</code>），<strong>没有 LLM 就不能跑</strong>——<code>main.py:946-959</code> 抽取失败会抛 <code>LLMError</code>（不再静默返回空，2026 修复的健壮性改进）。</p>
+<p><strong>最小可运行程序</strong>（README Basic Usage <code>[src]</code> 精简）：</p>
+<pre><code>from openai import OpenAI
+from mem0 import Memory
+
+memory = Memory()  # 读 ~/.mem0/ 下配置，默认 OpenAI
+
+# 写入：把这段对话蒸馏成事实
+memory.add([
+    {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;我叫张三，喜欢 Rust 和系统编程&quot;},
+    {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;好的，我记住了！&quot;}
+], user_id=&quot;alice&quot;)
+
+# 检索：多信号融合召回
+results = memory.search(&quot;张三喜欢什么语言&quot;, filters={&quot;user_id&quot;: &quot;alice&quot;}, top_k=3)
+for r in results[&quot;results&quot;]:
+    print(r[&quot;memory&quot;])</code></pre>
+<p><strong>要点</strong>：<code>Memory()</code> 零参数即可——默认走 OpenAI + <code>~/.mem0/</code> 本地 SQLite；<code>user_id</code> 是作用域隔离的最小单元（<code>main.py:143</code> <code>_strip_identity_keys</code> 会从 metadata 剥离身份键防篡改）。</p>
+<h4>1.3 小结</h4>
+<ul><li>安装 <code>pip install mem0ai</code> + <code>[nlp]</code> extra（hybrid search 需要 spaCy）。</li><li>默认 LLM gpt-5-mini / embedding text-embedding-3-small；无 LLM 则 add() 抛 <code>LLMError</code>。</li><li><code>Memory()</code> 零参数可用；最小数据流 = <code>add(messages, user_id=...)</code> → <code>search(query, filters)</code>。</li></ul>
+<h4>1.4 课后思考题</h4>
+<ul><li><strong>kp02-01（procedure）</strong>：如果一台无外网的机器要跑 mem0，最小改动是什么？（提示：两个 provider 维度 + 一个存储维度）请给出配置思路而非代码。</li></ul>
+<hr>
+<h3>2. MemoryConfig 配置与 Provider 工厂注册（kp02-02）</h3>
+<h4>2.1 学习目标</h4>
+<p>学完你能：看懂 <code>MemoryConfig</code> 结构、知道四类 Provider 如何被工厂注册、能替换默认的 LLM/向量库。</p>
+<h4>2.2 讲解 + 源码走读</h4>
+<p><strong>配置结构</strong>（<code>mem0/configs/base.py:29</code>）：</p>
+<pre><code>MemoryConfig(
+    llm=...,
+    embedder=...,
+    vector_store=...,
+    reranker=...,
+    history_db_path=&quot;~/.mem0/history.db&quot;,   # SQLite 审计日志路径
+    version=&quot;v1.0&quot;,
+    custom_instructions=&quot;...&quot;,
+)</code></pre>
+<p>Provider 配置类在 <code>mem0/configs/&lt;category&gt;/&lt;provider&gt;.py</code>（LLM→<code>configs/llms/ollama.py</code> 等），不在各目录的 <code>configs.py</code>。这是 repo 的<strong>目录约定</strong>，不是巧合。</p>
+<p><strong>工厂注册</strong>（<code>mem0/utils/factory.py:42</code>）：</p>
+<pre><code>class LlmFactory:
+    provider_to_class = {
+        &quot;openai&quot;: (OpenAILLM, OpenAIConfig),
+        &quot;ollama&quot;: (OllamaLLM, OllamaConfig),
+        # ... 18 个 LLM provider
+    }</code></pre>
+<p>四类工厂——<code>LlmFactory</code>(18) / <code>EmbedderFactory</code>(11) / <code>VectorStoreFactory</code>(25) / <code>RerankerFactory</code>(5)——统一由 <code>provider_to_class</code> 注册（<code>factory.py:42,79-82</code>）。<strong>各分类 <code>__init__.py</code> 为空</strong>：注册表在 <code>factory.py</code>，不在模块内。</p>
+<p><strong>替换 provider 的例子</strong>（换成本地 Ollama + 本地向量库）：</p>
+<pre><code>from mem0 import Memory
+from mem0.configs.base import MemoryConfig
+from mem0.configs.llms.ollama import OllamaConfig
+from mem0.configs.embeddings.ollama import OllamaConfig as OllamaEmbConfig
+from mem0.configs.vector_stores.qdrant import QdrantConfig
+
+config = MemoryConfig(
+    llm=OllamaConfig(model=&quot;llama3&quot;),
+    embedder=OllamaEmbConfig(model=&quot;nomic-embed-text&quot;),
+    vector_store=QdrantConfig(host=&quot;localhost&quot;, port=6333),
+)
+m = Memory.from_config(config)</code></pre>
+<h4>2.3 小结</h4>
+<ul><li><code>MemoryConfig</code> 五要素：llm / embedder / vector_store / reranker / history_db_path。</li><li>Provider 配置类按 <code>configs/&lt;category&gt;/&lt;provider&gt;.py</code> 组织；注册表统一在 <code>factory.py</code> 的 <code>provider_to_class</code>。</li><li>换 LLM/向量库 = 换 config 类，零业务代码改动——这是插件架构的核心收益。</li></ul>
+<h4>2.4 课后思考题</h4>
+<ul><li><strong>kp02-02（procedure）</strong>：要加一个新的 LLM provider "myllm"，需要动哪几个文件？（列出完整清单）</li></ul>
+<hr>
+<h3>3. 核心 API 用法（kp02-03）</h3>
+<h4>3.1 学习目标</h4>
+<p>学完你能：完整说出 <code>Memory</code> 的 8 个核心方法、各自签名与用途，知道什么时候用哪个。</p>
+<h4>3.2 讲解 + 源码走读</h4>
+<div class="table-wrap"><table>
+<tr><th>方法</th><th>签名要点</th><th>用途</th><th>证据</th></tr>
+<tr><th>---</th><th>---</th><th>---</th><th>---</th></tr>
+<tr><th><code>add</code></th><th><code>(messages, *, user_id, agent_id, run_id, metadata)</code></th><th>把对话蒸馏成事实入库</th><th><code>main.py:755</code></th></tr>
+<tr><th><code>search</code></th><th><code>(query, *, user_id, agent_id, run_id, limit, filters)</code></th><th>多信号融合召回</th><th><code>main.py:1369</code></th></tr>
+<tr><th><code>get</code></th><th><code>(memory_id)</code></th><th>按 ID 取单条</th><th><code>main.py</code>（update/delete 附近）</th></tr>
+<tr><th><code>get_all</code></th><th><code>(*, user_id, agent_id, run_id, limit)</code></th><th>列出某作用域全部</th><th><code>main.py</code></th></tr>
+<tr><th><code>update</code></th><th><code>(memory_id, data)</code></th><th>按 ID 手动改（<strong>非 LLM 驱动</strong>）</th><th><code>main.py:1805</code></th></tr>
+<tr><th><code>delete</code></th><th><code>(memory_id)</code></th><th>按 ID 手动删</th><th><code>main.py:1859</code></th></tr>
+<tr><th><code>delete_all</code></th><th><code>(*, user_id, agent_id, run_id)</code></th><th>清空作用域</th><th><code>main.py</code></th></tr>
+<tr><th><code>history</code></th><th><code>(memory_id)</code></th><th>审计日志（ADD/UPDATE/DELETE）</th><th><code>main.py</code></th></tr>
+</table></div>
+<p><strong>关键理解</strong>：<code>update</code>/<code>delete</code> 是<strong>按 ID 的手动操作</strong>，不由 LLM 驱动——这呼应 ADD-only 哲学：写路径只单调累积，改动靠显式人工（m06 详述）。<code>search</code> 的可选参数 <code>explain=True</code> 能逐项拆出 <code>semantic/bm25/entity_boost</code> 分数（<code>scoring.py:127</code>），调试召回质量必备。</p>
+<p><strong>平台客户端对比</strong>：<code>MemoryClient</code>（<code>client/main.py:82</code>）是托管平台的<strong>薄 HTTP 包装</strong>——本地不执行逻辑，全部发到 <code>api.mem0.ai</code>（add → <code>POST /v3/memories/add/</code>，<code>client/main.py:184</code>）。签名同 <code>Memory</code>，但行为是远程。</p>
+<h4>3.3 小结</h4>
+<ul><li>8 个核心方法覆盖完整生命周期：写（add）/ 读（search, get, get_all）/ 改（update）/ 删（delete, delete_all）/ 审计（history）。</li><li><code>update</code>/<code>delete</code> 是手动按 ID，非 LLM 决策——ADD-only 的体现。</li><li><code>Memory</code>（本地 OSS）与 <code>MemoryClient</code>（远程平台）签名镜像，行为完全不同。</li></ul>
+<h4>3.4 课后思考题</h4>
+<ul><li><strong>kp02-03（procedure）</strong>：调试时发现 search 召回了不该出现的记忆，你会用哪两个参数/方法最快定位原因？（提示：一个看分数构成，一个看作用域）</li></ul>
+<hr>
+<h3>章节总结</h3>
+<p><strong>本章心智模型</strong>：mem0 的"环境"由三层构成——<strong>安装</strong>（pip + nlp extra）、<strong>配置</strong>（<code>MemoryConfig</code> 五要素 + Provider 工厂注册）、<strong>API</strong>（8 方法完整生命周期）。理解"换 provider = 换 config 类"这条链，就理解了它的插件架构骨架。</p>
+<p><strong>关键 file:line 索引</strong>：<code>pyproject.toml:15</code>（Python 版本）、<code>configs/base.py:29</code>（MemoryConfig）、<code>utils/factory.py:42</code>（Provider 注册）、<code>main.py:755/1369/1805/1859</code>（核心方法）、<code>client/main.py:82,184</code>（平台客户端）。</p>
+<p><strong>与整体架构的钩子</strong>：这一章的 <code>Memory</code> 实例就是 m03 架构图的主角；<code>update</code>/<code>delete</code> 非 LLM 驱动已经预告了 m06 的 ADD-only 哲学。</p>
+<hr>
+<h3>Cheatsheet（memory 型，参考用）</h3>
+<pre><code>pip install mem0ai           # 核心
+pip install mem0ai[nlp]      # hybrid search 需要
+python -m spacy download en_core_web_sm
+
+# MemoryConfig 五要素
+llm / embedder / vector_store / reranker / history_db_path
+
+# Provider 注册表
+mem0/utils/factory.py:42  →  provider_to_class（LLM 18 / VectorStore 25 / Embedding 11 / Reranker 5）
+
+# 8 方法
+add(messages, user_id=...)  search(query, filters=..., top_k=...)
+get(id)  get_all(user_id=...)  update(id, data)  delete(id)
+delete_all(user_id=...)  history(id)
+search(..., explain=True)  # 看分数构成</code></pre>
+<h3>课后检验记录</h3>
+<blockquote>（课后阶段追加）kp02-01/02/03 → 判定结果 + 引擎返回。</blockquote></div>
+  </div>
+</section>
